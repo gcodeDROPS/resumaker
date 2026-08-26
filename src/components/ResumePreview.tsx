@@ -72,36 +72,36 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
     switch (styling.fontSize) {
       case "compact":
         return {
-          body: "text-[11.5px] leading-[1.35]",
+          body: "text-[11px] leading-[1.38]",
           name: "text-[20px]",
-          title: "text-[12px]",
+          title: "text-[11.5px]",
           heading: "text-[12px] tracking-wide",
           subheading: "text-[11.5px]",
-          meta: "text-[10.5px]",
-          bullet: "text-[11px] leading-[1.35]",
+          meta: "text-[10px]",
+          bullet: "text-[10.5px] leading-[1.38]",
           badge: "text-[10px] py-0.5 px-1.5",
         };
       case "spacious":
         return {
-          body: "text-[13.5px] leading-[1.55]",
-          name: "text-[26px]",
-          title: "text-[14.5px]",
-          heading: "text-[14px] tracking-wide",
-          subheading: "text-[13.5px]",
-          meta: "text-[12px]",
-          bullet: "text-[13px] leading-[1.5]",
-          badge: "text-[11.5px] py-1 px-2.5",
+          body: "text-[12.5px] leading-[1.55]",
+          name: "text-[24px]",
+          title: "text-[13.5px]",
+          heading: "text-[13.5px] tracking-wide",
+          subheading: "text-[13px]",
+          meta: "text-[11.5px]",
+          bullet: "text-[12px] leading-[1.5]",
+          badge: "text-[11px] py-0.5 px-2",
         };
       case "normal":
       default:
         return {
-          body: "text-[12.5px] leading-[1.42]",
-          name: "text-[23px]",
-          title: "text-[13px]",
+          body: "text-[12px] leading-[1.45]",
+          name: "text-[22px]",
+          title: "text-[12.5px]",
           heading: "text-[13px] tracking-wide",
           subheading: "text-[12.5px]",
           meta: "text-[11px]",
-          bullet: "text-[12px] leading-[1.42]",
+          bullet: "text-[11.5px] leading-[1.45]",
           badge: "text-[10.5px] py-0.5 px-2",
         };
     }
@@ -112,19 +112,19 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
       case "compact":
         return "p-6"; // ~0.35 in
       case "spacious":
-        return "p-10"; // ~0.65 in
+        return "p-9"; // ~0.55 in
       case "normal":
       default:
-        return "p-8"; // ~0.5 in
+        return "p-7"; // ~0.45 in
     }
   };
 
   const getSpacingClass = () => {
     switch (styling.lineHeight) {
       case "compact":
-        return { sectionGap: "space-y-3.5", itemGap: "space-y-2", bulletGap: "space-y-1" };
+        return { sectionGap: "space-y-3", itemGap: "space-y-2", bulletGap: "space-y-0.5" };
       case "spacious":
-        return { sectionGap: "space-y-5", itemGap: "space-y-3.5", bulletGap: "space-y-1.5" };
+        return { sectionGap: "space-y-5", itemGap: "space-y-3", bulletGap: "space-y-1.5" };
       case "normal":
       default:
         return { sectionGap: "space-y-4", itemGap: "space-y-2.5", bulletGap: "space-y-1" };
@@ -314,11 +314,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
           </div>
 
           {/* Right Column */}
-          <div
-            className={`col-span-8 ${getPaddingClass()} flex flex-col ${
-              styling.autoFillPage !== false ? "justify-between" : `justify-start ${spacingClasses.sectionGap}`
-            }`}
-          >
+          <div className={`col-span-8 ${getPaddingClass()} flex flex-col justify-start ${spacingClasses.sectionGap}`}>
             {/* Summary */}
             {styling.showSummary && resume.summary && (
               <div>
@@ -335,7 +331,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
             )}
 
             {/* Work Experience */}
-            <div className={styling.autoFillPage !== false ? "my-auto" : ""}>
+            <div>
               <h2
                 className={`${fontClasses.heading} font-bold uppercase tracking-wider mb-2.5 pb-1 border-b border-slate-200`}
                 style={{ color: primaryColor }}
@@ -427,12 +423,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
           overflow: "hidden",
         }}
       >
-        <div
-          ref={contentRef}
-          className={`h-full flex flex-col ${
-            styling.autoFillPage !== false ? "justify-between" : `justify-start ${spacingClasses.sectionGap}`
-          }`}
-        >
+        <div ref={contentRef} className={`flex flex-col justify-start ${spacingClasses.sectionGap}`}>
           {/* Header */}
           <div className="text-center pb-3 border-b-2 border-slate-800">
             <h1
@@ -600,12 +591,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
           overflow: "hidden",
         }}
       >
-        <div
-          ref={contentRef}
-          className={`h-full flex flex-col ${
-            styling.autoFillPage !== false ? "justify-between" : `justify-start ${spacingClasses.sectionGap}`
-          }`}
-        >
+        <div ref={contentRef} className={`flex flex-col justify-start ${spacingClasses.sectionGap}`}>
           {/* Header */}
           <div className="flex justify-between items-start border-b-2 pb-3" style={{ borderColor: primaryColor }}>
             <div>
@@ -801,12 +787,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
         overflow: "hidden",
       }}
     >
-      <div
-        ref={contentRef}
-        className={`h-full flex flex-col ${
-          styling.autoFillPage !== false ? "justify-between" : `justify-start ${spacingClasses.sectionGap}`
-        }`}
-      >
+      <div ref={contentRef} className={`flex flex-col justify-start ${spacingClasses.sectionGap}`}>
         {/* Header */}
         <div className="pb-3 border-b-2" style={{ borderColor: primaryColor }}>
           <div className="flex justify-between items-end">

@@ -114,17 +114,17 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             className={`w-2 h-2 rounded-full shrink-0 ${
               pageFillPercentage > 102
                 ? "bg-rose-500 animate-pulse"
-                : pageFillPercentage < 85
+                : pageFillPercentage < 72
                 ? "bg-amber-500"
                 : "bg-emerald-500"
             }`}
           />
-          <span className="text-[11px] font-semibold text-slate-600 hidden md:inline">1-Page:</span>
+          <span className="text-[11px] font-semibold text-slate-600 hidden md:inline">1-Page Fit:</span>
           <span
             className={`text-[11px] font-mono font-bold ${
               pageFillPercentage > 102
                 ? "text-rose-600"
-                : pageFillPercentage < 85
+                : pageFillPercentage < 72
                 ? "text-amber-600"
                 : "text-emerald-600"
             }`}
@@ -141,14 +141,14 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               <Zap className="w-2.5 h-2.5" />
               <span>Auto-Fit</span>
             </button>
-          ) : pageFillPercentage < 88 ? (
+          ) : pageFillPercentage < 72 ? (
             <button
               onClick={onAutoFit}
               className="ml-1 px-1.5 py-0.5 rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-[10px] font-bold flex items-center gap-0.5 transition-colors cursor-pointer"
-              title="Click to automatically expand fonts, margins and spacing to fill up the full page"
+              title="Click to expand formatting to optimal 80%+ coverage"
             >
               <Zap className="w-2.5 h-2.5" />
-              <span>Fill Page</span>
+              <span>Auto-Fit (80%+)</span>
             </button>
           ) : null}
         </div>
@@ -329,39 +329,19 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 </div>
               </div>
 
-              {/* Auto-Fill Full Page Toggle */}
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                <div>
-                  <div className="text-xs font-semibold text-slate-800">Fill Single Page</div>
-                  <div className="text-[10px] text-slate-500">Auto-distribute spacing for short resumes</div>
-                </div>
+              {/* 1-Click Auto Fit */}
+              <div className="pt-2 border-t border-slate-100">
                 <button
-                  type="button"
-                  onClick={() =>
-                    onStylingChange({
-                      ...styling,
-                      autoFillPage: styling.autoFillPage === false ? true : false,
-                    })
-                  }
-                  className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
-                    styling.autoFillPage !== false ? "bg-indigo-600 justify-end" : "bg-slate-300 justify-start"
-                  }`}
+                  onClick={() => {
+                    onAutoFit();
+                    setShowStyleMenu(false);
+                  }}
+                  className="w-full py-2 px-3 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                 >
-                  <span className="w-4 h-4 rounded-full bg-white shadow-xs block" />
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>Auto-Fit (Balanced 1-Page)</span>
                 </button>
               </div>
-
-              {/* 1-Click Auto Fit */}
-              <button
-                onClick={() => {
-                  onAutoFit();
-                  setShowStyleMenu(false);
-                }}
-                className="w-full py-2 px-3 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-              >
-                <Zap className="w-3.5 h-3.5" />
-                <span>Auto-Fit Entire Page Now</span>
-              </button>
             </div>
           )}
         </div>

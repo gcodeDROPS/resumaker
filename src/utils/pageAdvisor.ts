@@ -14,14 +14,9 @@ export function evaluateOnePageFit(
   renderedHeightPx: number,
   containerHeightPx: number
 ): PageFitResult {
-  const rawFillPercentage = containerHeightPx > 0 
+  const fillPercentage = containerHeightPx > 0 
     ? Math.round((renderedHeightPx / containerHeightPx) * 100)
-    : 85;
-
-  // When autoFillPage is enabled, if it's within 1 page (<=102%), it fills 100% of the canvas
-  const fillPercentage = styling.autoFillPage !== false && rawFillPercentage <= 102
-    ? 100
-    : rawFillPercentage;
+    : 82;
 
   let totalBulletCount = 0;
   resume.experiences.forEach((exp) => {
@@ -33,7 +28,7 @@ export function evaluateOnePageFit(
   let status: "perfect" | "underfilled" | "overflow" = "perfect";
   let statusText = "Fits strictly on 1 Page";
 
-  if (rawFillPercentage > 102) {
+  if (fillPercentage > 102) {
     status = "overflow";
     statusText = "Exceeds 1 Page";
     if (styling.fontSize !== "compact") {
@@ -46,20 +41,20 @@ export function evaluateOnePageFit(
       suggestions.push("Reduce Page Margins to 'Compact'.");
     }
     if (totalBulletCount > 9) {
-      suggestions.push(`You have ${totalBulletCount} bullets across jobs. Trimming 1-2 bullets or using ⚡ Auto-Fit will ensure crisp 1-page fit.`);
+      suggestions.push(`You have ${totalBulletCount} bullets across jobs. Trimming 1-2 bullets or using Auto-Fit will ensure crisp 1-page fit.`);
     }
-  } else if (rawFillPercentage < 75 && styling.autoFillPage === false) {
+  } else if (fillPercentage < 68) {
     status = "underfilled";
-    statusText = "Short resume — space available";
-    suggestions.push("Click 'Auto-Fit 1-Page' to automatically expand spacing, fonts, and fill up the entire page.");
-    if (resume.summary.length < 50) {
+    statusText = "Short resume — plenty of space";
+    suggestions.push("Switch to 'Spacious' formatting or add a 2-3 sentence AI summary to reach 80%+ visual weight.");
+    if (resume.summary.length < 30) {
       suggestions.push("Add a 2-3 sentence AI Professional Summary to highlight your strengths.");
     }
   } else {
     status = "perfect";
-    statusText = styling.autoFillPage !== false
-      ? "Auto-Fitted to 1 Full Page (100%)"
-      : "Optimal 1-Page Proportions (90-100%)";
+    statusText = fillPercentage >= 75 
+      ? `Balanced 1-Page Layout (${fillPercentage}%)`
+      : `Clean 1-Page Layout (${fillPercentage}%)`;
   }
 
   return {
@@ -72,23 +67,29 @@ export function evaluateOnePageFit(
 }
 
 export function autoFitConfig(current: StylingConfig, currentFillPercent: number): StylingConfig {
-  if (currentFillPercent > 100) {
-    // Needs tightening to prevent 2nd page overflow
+  if (currentFillPercent > 102) {
+    // Tighten to single page
     return {
       ...current,
       fontSize: "compact",
       lineHeight: "compact",
       marginSize: "compact",
-      autoFillPage: false,
     };
-  } else {
-    // Underfilled or short resume — expand and distribute evenly to fill the entire 1-page
+  } else if (currentFillPercent < 72) {
+    // Expand gently to reach ~80% coverage
     return {
       ...current,
       fontSize: "spacious",
       lineHeight: "spacious",
       marginSize: "spacious",
-      autoFillPage: true,
+    };
+  } else {
+    // Balanced normal
+    return {
+      ...current,
+      fontSize: "normal",
+      lineHeight: "normal",
+      marginSize: "normal",
     };
   }
 }
