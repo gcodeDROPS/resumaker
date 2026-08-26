@@ -24,13 +24,11 @@ import {
 interface EditorPanelProps {
   resume: ResumeData;
   onChange: (updated: ResumeData) => void;
-  onOpenQuickGen: () => void;
 }
 
 export const EditorPanel: React.FC<EditorPanelProps> = ({
   resume,
   onChange,
-  onOpenQuickGen,
 }) => {
   const [activeTab, setActiveTab] = useState<"contact" | "summary" | "experience" | "skills" | "education" | "extras">("experience");
   const [generatingBulletsFor, setGeneratingBulletsFor] = useState<string | null>(null);
@@ -72,6 +70,7 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
           jobTitle: exp.jobTitle,
           company: exp.company,
           description: exp.rawNotes || (exp.jobTitle ? `${exp.jobTitle} at ${exp.company || "company"}` : ""),
+          summary: resume.summary,
           targetRole: resume.contact.jobTitle,
           count: 3,
         }),
@@ -298,7 +297,7 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
 
   return (
     <div className="flex flex-col h-full bg-white border-r border-slate-200 text-slate-800">
-      {/* Top Banner / AI Quick Start */}
+      {/* Top Banner */}
       <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded bg-indigo-100 flex items-center justify-center text-indigo-700 shrink-0">
@@ -306,14 +305,7 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
           </div>
           <span className="text-xs font-bold text-slate-800">Resume Editor</span>
         </div>
-
-        <button
-          onClick={onOpenQuickGen}
-          className="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
-        >
-          <Sparkles className="w-3 h-3 text-amber-300" />
-          <span>Quick Bio Generate</span>
-        </button>
+        <span className="text-[11px] text-slate-500 font-medium">1-Page ATS Optimized</span>
       </div>
 
       {/* Tabs */}

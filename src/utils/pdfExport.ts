@@ -7,18 +7,35 @@ export async function exportResumeToPDF(elementId: string, fileName: string = "r
     throw new Error("Resume element not found");
   }
 
-  // Hide any edit markers temporarily if any
-  const editButtons = element.querySelectorAll(".resume-edit-marker");
-  editButtons.forEach((el) => ((el as HTMLElement).style.display = "none"));
+  // Create an offscreen wrapper to render the unscaled 8.5in x 11in clone at 1:1
+  const clone = element.cloneNode(true) as HTMLElement;
+  clone.id = "resume-export-clone";
+  clone.style.transform = "none";
+  clone.style.margin = "0";
+  clone.style.position = "fixed";
+  clone.style.left = "-9999px";
+  clone.style.top = "0";
+  clone.style.width = "8.5in";
+  clone.style.height = "11in";
+  clone.style.minHeight = "11in";
+  clone.style.maxHeight = "11in";
+  clone.style.boxShadow = "none";
+  clone.style.zIndex = "-1000";
+  clone.style.backgroundColor = "#ffffff";
+  clone.style.visibility = "visible";
+
+  document.body.appendChild(clone);
 
   try {
-    const canvas = await html2canvas(element, {
-      scale: 2.5, // High resolution for crystal clear print
+    const canvas = await html2canvas(clone, {
+      scale: 3, // Ultra-high resolution 300 DPI equivalent
       useCORS: true,
       logging: false,
       backgroundColor: "#ffffff",
-      windowWidth: element.scrollWidth,
-      windowHeight: element.scrollHeight,
+      width: clone.offsetWidth,
+      height: clone.offsetHeight,
+      windowWidth: clone.offsetWidth,
+      windowHeight: clone.offsetHeight,
     });
 
     const imgData = canvas.toDataURL("image/jpeg", 0.98);
@@ -36,10 +53,13 @@ export async function exportResumeToPDF(elementId: string, fileName: string = "r
     pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
     pdf.save(fileName);
   } finally {
-    editButtons.forEach((el) => ((el as HTMLElement).style.display = ""));
+    if (clone.parentNode) {
+      clone.parentNode.removeChild(clone);
+    }
   }
 }
 
 export function printResume(): void {
   window.print();
 }
+

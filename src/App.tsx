@@ -4,7 +4,6 @@ import { SAMPLE_SOFTWARE_ENGINEER } from "./data/sampleResumes";
 import { ResumePreview } from "./components/ResumePreview";
 import { EditorPanel } from "./components/EditorPanel";
 import { Toolbar } from "./components/Toolbar";
-import { QuickGenModal } from "./components/QuickGenModal";
 import { PageFitAdvisor } from "./components/PageFitAdvisor";
 import { exportResumeToPDF, printResume } from "./utils/pdfExport";
 import { evaluateOnePageFit, autoFitConfig } from "./utils/pageAdvisor";
@@ -60,7 +59,6 @@ export default function App() {
   const [previewScale, setPreviewScale] = useState<number>(0.85);
   const [renderedHeightPx, setRenderedHeightPx] = useState<number>(1056);
   const [pageContainerHeightPx, setPageContainerHeightPx] = useState<number>(1056);
-  const [isQuickGenOpen, setIsQuickGenOpen] = useState<boolean>(false);
   const [isExportingPDF, setIsExportingPDF] = useState<boolean>(false);
   const [activeViewMode, setActiveViewMode] = useState<"split" | "editor" | "preview">("split");
 
@@ -178,31 +176,32 @@ export default function App() {
   return (
     <div className="h-screen flex flex-col bg-[#f8fafc] font-sans select-none text-slate-900 overflow-hidden">
       {/* Top Header & Toolbar */}
-      <Toolbar
-        styling={styling}
-        onStylingChange={setStyling}
-        onAutoFit={handleAutoFit}
-        onExportPDF={handleExportPDF}
-        onPrint={handlePrint}
-        onLoadSample={setResume}
-        onExportJSON={handleExportJSON}
-        onImportJSON={handleImportJSON}
-        pageFillPercentage={fitResult.fillPercentage}
-        isExportingPDF={isExportingPDF}
-      />
+      <div className="no-print">
+        <Toolbar
+          styling={styling}
+          onStylingChange={setStyling}
+          onAutoFit={handleAutoFit}
+          onExportPDF={handleExportPDF}
+          onPrint={handlePrint}
+          onLoadSample={setResume}
+          onExportJSON={handleExportJSON}
+          onImportJSON={handleImportJSON}
+          pageFillPercentage={fitResult.fillPercentage}
+          isExportingPDF={isExportingPDF}
+        />
+      </div>
 
       {/* Main Split Interface */}
       <main className="flex-1 flex overflow-hidden min-h-0">
         {/* Left Side: Interactive AI Editor */}
         <aside
-          className={`w-full lg:w-[420px] xl:w-[460px] shrink-0 h-full overflow-hidden flex flex-col select-text bg-white border-r border-slate-200 ${
+          className={`no-print w-full lg:w-[420px] xl:w-[460px] shrink-0 h-full overflow-hidden flex flex-col select-text bg-white border-r border-slate-200 ${
             activeViewMode === "preview" ? "hidden lg:flex" : "flex"
           }`}
         >
           <EditorPanel
             resume={resume}
             onChange={setResume}
-            onOpenQuickGen={() => setIsQuickGenOpen(true)}
           />
         </aside>
 
@@ -329,21 +328,11 @@ export default function App() {
           </div>
 
           {/* Bottom Page Advisor Card */}
-          <div className="w-full max-w-lg mb-8">
+          <div className="no-print w-full max-w-lg mb-8">
             <PageFitAdvisor fitResult={fitResult} onAutoFit={handleAutoFit} />
           </div>
         </section>
       </main>
-
-      {/* 1-Click AI Quick Generator Modal */}
-      <QuickGenModal
-        isOpen={isQuickGenOpen}
-        onClose={() => setIsQuickGenOpen(false)}
-        onApply={(generated) => {
-          setResume(generated);
-          handleAutoFit();
-        }}
-      />
     </div>
   );
 }
