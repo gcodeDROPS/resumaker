@@ -8,6 +8,7 @@ import {
   Zap,
   Check,
   RotateCcw,
+  MoveVertical,
 } from "lucide-react";
 import {
   SAMPLE_SOFTWARE_ENGINEER,
@@ -112,7 +113,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-xs">
           <span
             className={`w-2 h-2 rounded-full shrink-0 ${
-              pageFillPercentage > 102
+              pageFillPercentage > 100
                 ? "bg-rose-500 animate-pulse"
                 : pageFillPercentage < 72
                 ? "bg-amber-500"
@@ -122,7 +123,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           <span className="text-[11px] font-semibold text-slate-600 hidden md:inline">1-Page Fit:</span>
           <span
             className={`text-[11px] font-mono font-bold ${
-              pageFillPercentage > 102
+              pageFillPercentage > 100
                 ? "text-rose-600"
                 : pageFillPercentage < 72
                 ? "text-amber-600"
@@ -132,25 +133,33 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             {pageFillPercentage}%
           </span>
 
-          {pageFillPercentage > 102 ? (
-            <button
-              onClick={onAutoFit}
-              className="ml-1 px-1.5 py-0.5 rounded bg-rose-100 hover:bg-rose-200 text-rose-700 text-[10px] font-bold flex items-center gap-0.5 transition-colors cursor-pointer"
-              title="Click to automatically adjust font and spacing to fit exactly 1 page"
-            >
-              <Zap className="w-2.5 h-2.5" />
-              <span>Auto-Fit</span>
-            </button>
-          ) : pageFillPercentage < 72 ? (
-            <button
-              onClick={onAutoFit}
-              className="ml-1 px-1.5 py-0.5 rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-[10px] font-bold flex items-center gap-0.5 transition-colors cursor-pointer"
-              title="Click to expand formatting to optimal 80%+ coverage"
-            >
-              <Zap className="w-2.5 h-2.5" />
-              <span>Auto-Fit (80%+)</span>
-            </button>
-          ) : null}
+          <button
+            onClick={onAutoFit}
+            className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${
+              pageFillPercentage > 100
+                ? "bg-rose-100 hover:bg-rose-200 text-rose-700"
+                : "bg-indigo-100 hover:bg-indigo-200 text-indigo-700"
+            }`}
+            title="Auto-Fit: optimize font size, line spacing, margins, and auto-spacer"
+          >
+            <Zap className="w-2.5 h-2.5" />
+            <span>Auto-Fit</span>
+          </button>
+
+          {/* Auto-Spacer Quick Button */}
+          <button
+            onClick={() => onStylingChange({ ...styling, autoFillPage: !styling.autoFillPage })}
+            className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
+              styling.autoFillPage
+                ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                : "bg-slate-200 text-slate-600 hover:bg-slate-300"
+            }`}
+            title="Auto-Fill Spacer: Distribute vertical space evenly across 1 page"
+          >
+            <MoveVertical className="w-2.5 h-2.5" />
+            <span className="hidden sm:inline">Spacer:</span>
+            <span>{styling.autoFillPage ? "ON" : "OFF"}</span>
+          </button>
         </div>
       </div>
 
@@ -329,8 +338,38 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 </div>
               </div>
 
-              {/* 1-Click Auto Fit */}
+              {/* AutoFill Vertical Page Spacer Toggle */}
               <div className="pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() =>
+                    onStylingChange({ ...styling, autoFillPage: !styling.autoFillPage })
+                  }
+                  className={`w-full py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
+                    styling.autoFillPage
+                      ? "bg-indigo-50 border-indigo-200 text-indigo-800"
+                      : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <MoveVertical className={`w-3.5 h-3.5 ${styling.autoFillPage ? "text-indigo-600" : "text-slate-400"}`} />
+                    <div className="text-left">
+                      <div className="font-bold leading-tight">Auto-Fill Page Spacer</div>
+                      <div className="text-[10px] text-slate-500 font-normal">Distributes vertical gap across 1 page</div>
+                    </div>
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      styling.autoFillPage ? "bg-indigo-600 text-white" : "bg-slate-200 text-slate-600"
+                    }`}
+                  >
+                    {styling.autoFillPage ? "ACTIVE" : "OFF"}
+                  </span>
+                </button>
+              </div>
+
+              {/* 1-Click Auto Fit */}
+              <div className="pt-1">
                 <button
                   onClick={() => {
                     onAutoFit();

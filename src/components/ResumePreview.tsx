@@ -36,9 +36,38 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
 
     const measureHeight = () => {
       if (contentRef.current && pageRef.current) {
-        const rendered = contentRef.current.scrollHeight;
-        const pageHeight = pageRef.current.clientHeight;
-        onUpdateHeight?.(rendered, pageHeight);
+        const computedStyle = window.getComputedStyle(pageRef.current);
+        const paddingTop = parseFloat(computedStyle.paddingTop) || 0;
+        const paddingBottom = parseFloat(computedStyle.paddingBottom) || 0;
+        const pageHeight = pageRef.current.clientHeight || 1056;
+
+        let naturalHeight = 0;
+        if (styling.template === "twocolumn") {
+          const cols = contentRef.current.querySelectorAll(":scope > div");
+          if (cols.length >= 2) {
+            const leftH = (cols[0] as HTMLElement).scrollHeight;
+            const rightH = (cols[1] as HTMLElement).scrollHeight;
+            naturalHeight = Math.max(leftH, rightH);
+          } else {
+            naturalHeight = contentRef.current.scrollHeight;
+          }
+        } else {
+          const children = Array.from(contentRef.current.children) as HTMLElement[];
+          if (children.length > 0) {
+            let sum = 0;
+            children.forEach((c) => {
+              sum += c.offsetHeight;
+            });
+            const baseGap = styling.lineHeight === "compact" ? 12 : styling.lineHeight === "spacious" ? 20 : 16;
+            const estimatedGaps = Math.max(0, children.length - 1) * baseGap;
+            naturalHeight = sum + estimatedGaps;
+          } else {
+            naturalHeight = contentRef.current.scrollHeight;
+          }
+        }
+
+        const totalRendered = styling.template === "twocolumn" ? naturalHeight : naturalHeight + paddingTop + paddingBottom;
+        onUpdateHeight?.(totalRendered, pageHeight);
       }
     };
 
@@ -314,7 +343,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
           </div>
 
           {/* Right Column */}
-          <div className={`col-span-8 ${getPaddingClass()} flex flex-col justify-start ${spacingClasses.sectionGap}`}>
+          <div className={`col-span-8 ${getPaddingClass()} flex flex-col ${styling.autoFillPage ? "h-full justify-between" : `justify-start ${spacingClasses.sectionGap}`}`}>
             {/* Summary */}
             {styling.showSummary && resume.summary && (
               <div>
@@ -423,7 +452,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
           overflow: "hidden",
         }}
       >
-        <div ref={contentRef} className={`flex flex-col justify-start ${spacingClasses.sectionGap}`}>
+        <div ref={contentRef} className={`flex flex-col ${styling.autoFillPage ? "h-full justify-between" : `justify-start ${spacingClasses.sectionGap}`}`}>
           {/* Header */}
           <div className="text-center pb-3 border-b-2 border-slate-800">
             <h1
@@ -591,7 +620,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
           overflow: "hidden",
         }}
       >
-        <div ref={contentRef} className={`flex flex-col justify-start ${spacingClasses.sectionGap}`}>
+        <div ref={contentRef} className={`flex flex-col ${styling.autoFillPage ? "h-full justify-between" : `justify-start ${spacingClasses.sectionGap}`}`}>
           {/* Header */}
           <div className="flex justify-between items-start border-b-2 pb-3" style={{ borderColor: primaryColor }}>
             <div>
@@ -787,7 +816,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
         overflow: "hidden",
       }}
     >
-      <div ref={contentRef} className={`flex flex-col justify-start ${spacingClasses.sectionGap}`}>
+      <div ref={contentRef} className={`flex flex-col ${styling.autoFillPage ? "h-full justify-between" : `justify-start ${spacingClasses.sectionGap}`}`}>
         {/* Header */}
         <div className="pb-3 border-b-2" style={{ borderColor: primaryColor }}>
           <div className="flex justify-between items-end">
