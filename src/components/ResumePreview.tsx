@@ -97,41 +97,42 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
   };
 
   // Density spacing mapping
+  // Density spacing mapping calibrated for real 8.5" x 11" page typography (96 DPI)
   const getFontSizeClasses = () => {
     switch (styling.fontSize) {
       case "compact":
         return {
-          body: "text-[11px] leading-[1.38]",
-          name: "text-[20px]",
-          title: "text-[11.5px]",
-          heading: "text-[12px] tracking-wide",
-          subheading: "text-[11.5px]",
-          meta: "text-[10px]",
-          bullet: "text-[10.5px] leading-[1.38]",
-          badge: "text-[10px] py-0.5 px-1.5",
+          body: "text-[12px] leading-[1.48]",
+          name: "text-[24px]",
+          title: "text-[13px]",
+          heading: "text-[13px] tracking-wide",
+          subheading: "text-[12.5px]",
+          meta: "text-[11.5px]",
+          bullet: "text-[12px] leading-[1.48]",
+          badge: "text-[11px] py-0.5 px-2",
         };
       case "spacious":
         return {
-          body: "text-[12.5px] leading-[1.55]",
-          name: "text-[24px]",
-          title: "text-[13.5px]",
-          heading: "text-[13.5px] tracking-wide",
-          subheading: "text-[13px]",
-          meta: "text-[11.5px]",
-          bullet: "text-[12px] leading-[1.5]",
-          badge: "text-[11px] py-0.5 px-2",
+          body: "text-[14px] leading-[1.65]",
+          name: "text-[30px]",
+          title: "text-[15px]",
+          heading: "text-[15px] tracking-wide",
+          subheading: "text-[14.5px]",
+          meta: "text-[13px]",
+          bullet: "text-[13.5px] leading-[1.65]",
+          badge: "text-[12.5px] py-1 px-3",
         };
       case "normal":
       default:
         return {
-          body: "text-[12px] leading-[1.45]",
-          name: "text-[22px]",
-          title: "text-[12.5px]",
-          heading: "text-[13px] tracking-wide",
-          subheading: "text-[12.5px]",
-          meta: "text-[11px]",
-          bullet: "text-[11.5px] leading-[1.45]",
-          badge: "text-[10.5px] py-0.5 px-2",
+          body: "text-[13px] leading-[1.58]",
+          name: "text-[27px]",
+          title: "text-[14px]",
+          heading: "text-[14px] tracking-wide",
+          subheading: "text-[13.5px]",
+          meta: "text-[12px]",
+          bullet: "text-[12.8px] leading-[1.58]",
+          badge: "text-[11.5px] py-1 px-2.5",
         };
     }
   };
@@ -139,37 +140,37 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
   const getPaddingClass = () => {
     switch (styling.marginSize) {
       case "compact":
-        return "p-6"; // ~0.35 in
+        return "p-6"; // ~0.45 in
       case "spacious":
-        return "p-9"; // ~0.55 in
+        return "p-10"; // ~0.85 in
       case "normal":
       default:
-        return "p-7"; // ~0.45 in
+        return "p-8"; // ~0.65 in standard resume margin
     }
   };
 
   const getSpacingClass = () => {
     if (styling.autoFillPage) {
-      // Gentle, proportional expansion from the top down: expands breathing room without pushing content to bottom
+      // Gentle proportional breathing room to fill whitespace from the top down
       switch (styling.lineHeight) {
         case "compact":
-          return { sectionGap: "space-y-4", itemGap: "space-y-2.5", bulletGap: "space-y-1" };
+          return { sectionGap: "space-y-5", itemGap: "space-y-3.5", bulletGap: "space-y-1.5" };
         case "spacious":
-          return { sectionGap: "space-y-6", itemGap: "space-y-4", bulletGap: "space-y-2" };
+          return { sectionGap: "space-y-8", itemGap: "space-y-5.5", bulletGap: "space-y-2.5" };
         case "normal":
         default:
-          return { sectionGap: "space-y-5", itemGap: "space-y-3", bulletGap: "space-y-1.5" };
+          return { sectionGap: "space-y-6", itemGap: "space-y-4.5", bulletGap: "space-y-2" };
       }
     }
 
     switch (styling.lineHeight) {
       case "compact":
-        return { sectionGap: "space-y-3", itemGap: "space-y-2", bulletGap: "space-y-0.5" };
+        return { sectionGap: "space-y-4", itemGap: "space-y-3", bulletGap: "space-y-1" };
       case "spacious":
-        return { sectionGap: "space-y-5", itemGap: "space-y-3", bulletGap: "space-y-1.5" };
+        return { sectionGap: "space-y-7", itemGap: "space-y-5", bulletGap: "space-y-2.5" };
       case "normal":
       default:
-        return { sectionGap: "space-y-4", itemGap: "space-y-2.5", bulletGap: "space-y-1" };
+        return { sectionGap: "space-y-5", itemGap: "space-y-3.5", bulletGap: "space-y-1.5" };
     }
   };
 
@@ -247,10 +248,10 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
         <div ref={contentRef} className="h-full grid grid-cols-12">
           {/* Left Column */}
           <div
-            className="col-span-4 bg-slate-50 border-r border-slate-200 p-6 flex flex-col justify-start space-y-4"
+            className="col-span-4 bg-slate-50 border-r border-slate-200 p-7 flex flex-col justify-start space-y-5"
             style={{ backgroundColor: `${primaryColor}0d` }}
           >
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
                 <h1
                   className={`${fontClasses.name} font-bold tracking-tight text-slate-900 leading-tight`}

@@ -19,6 +19,9 @@ import {
   FolderGit2,
   Award,
   HelpCircle,
+  Pencil,
+  MoreHorizontal,
+  Lightbulb,
 } from "lucide-react";
 
 interface EditorPanelProps {
@@ -31,14 +34,15 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
   onChange,
 }) => {
   const [activeTab, setActiveTab] = useState<"contact" | "summary" | "experience" | "skills" | "education" | "extras">("experience");
+  const [activeJobId, setActiveJobId] = useState<string | null>(resume.experiences[0]?.id || null);
+  const [activeEduId, setActiveEduId] = useState<string | null>(resume.education[0]?.id || null);
+  const [showAiDrafterFor, setShowAiDrafterFor] = useState<string | null>(null);
+  const [openPolishMenuKey, setOpenPolishMenuKey] = useState<string | null>(null);
   const [generatingBulletsFor, setGeneratingBulletsFor] = useState<string | null>(null);
   const [polishingBulletKey, setPolishingBulletKey] = useState<string | null>(null);
   const [generatingSummary, setGeneratingSummary] = useState(false);
   const [suggestingSkills, setSuggestingSkills] = useState(false);
   const [newSkillInput, setNewSkillInput] = useState("");
-  const [expandedJobs, setExpandedJobs] = useState<Record<string, boolean>>({
-    [resume.experiences[0]?.id || "default"]: true,
-  });
 
   // Contact field handler
   const handleContactChange = (field: keyof ResumeData["contact"], val: string) => {
@@ -51,9 +55,14 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
     });
   };
 
-  // Toggle job card expand
+  // Toggle job card expand (single accordion focus)
   const toggleJobExpand = (id: string) => {
-    setExpandedJobs((prev) => ({ ...prev, [id]: !prev[id] }));
+    setActiveJobId((prev) => (prev === id ? null : id));
+  };
+
+  // Toggle education card expand
+  const toggleEduExpand = (id: string) => {
+    setActiveEduId((prev) => (prev === id ? null : id));
   };
 
   // Generate bullet points with Gemini AI from 1-2 sentence description
@@ -163,7 +172,7 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
       ...resume,
       experiences: [newJob, ...resume.experiences],
     });
-    setExpandedJobs((prev) => ({ ...prev, [newId]: true }));
+    setActiveJobId(newId);
   };
 
   // Delete job
@@ -252,7 +261,7 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
     }
   };
 
-  // AI Skills Suggester
+  // AI Skills Suggester - Deeply aligns skills with summary & work experience
   const handleSuggestSkills = async () => {
     setSuggestingSkills(true);
     try {
@@ -261,11 +270,14 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           targetRole: resume.contact.jobTitle,
+          summary: resume.summary,
           experiences: resume.experiences.map((e) => ({
             title: e.jobTitle,
+            company: e.company,
             notes: e.rawNotes,
             bullets: e.bullets,
           })),
+          currentSkills: resume.skills,
         }),
       });
       const data = await res.json();
@@ -275,9 +287,8 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
         ...(data.coreCompetencies || []),
       ];
       if (combined.length > 0) {
-        // Merge without duplicates
-        const set = new Set([...resume.skills, ...combined]);
-        onChange({ ...resume, skills: Array.from(set).slice(0, 14) });
+        // Aligned skills directly replace / populate skills
+        onChange({ ...resume, skills: combined.slice(0, 14) });
       }
     } catch (err) {
       console.error("Failed to suggest skills:", err);
@@ -393,82 +404,132 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* TAB 1: WORK EXPERIENCE (Core AI Powerhouse) */}
         {activeTab === "experience" && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
+          <div className="space-y-3">
+            {/* Header */}
+            <div className="flex justify-between items-center bg-slate-50/80 p-3 rounded-lg border border-slate-200/80">
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                   <Briefcase className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Job History & AI Bullets</span>
+                  <span>Work History & Bullets</span>
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  Type 1-2 quick sentences describing what you did → AI turns them into executive bullet points.
+                  Click any role to edit details or polish executive bullets.
                 </p>
               </div>
 
               <button
                 onClick={handleAddJob}
-                className="px-3 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 border border-slate-200 transition-colors cursor-pointer shadow-xs"
+                className="px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Position</span>
               </button>
             </div>
 
-            {resume.experiences.map((exp, expIdx) => {
-              const isExpanded = expandedJobs[exp.id] ?? true;
-              const isGenerating = generatingBulletsFor === exp.id;
+            {/* Position List */}
+            <div className="space-y-2.5">
+              {resume.experiences.map((exp, expIdx) => {
+                const isActive = activeJobId === exp.id;
+                const isGenerating = generatingBulletsFor === exp.id;
+                const isDrafterOpen = showAiDrafterFor === exp.id;
 
-              return (
-                <div
-                  key={exp.id}
-                  className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden shadow-xs transition-all"
-                >
-                  {/* Job Header Card */}
+                if (!isActive) {
+                  // Collapsed, clean summary card
+                  return (
+                    <div
+                      key={exp.id}
+                      onClick={() => toggleJobExpand(exp.id)}
+                      className="p-3 rounded-lg bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-xs flex items-center justify-between cursor-pointer transition-all group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-6 h-6 rounded bg-slate-100 group-hover:bg-indigo-50 text-slate-600 group-hover:text-indigo-700 font-mono text-xs font-bold flex items-center justify-center shrink-0 transition-colors">
+                          {expIdx + 1}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-800 truncate">
+                            {exp.jobTitle || "Untitled Role"}{" "}
+                            {exp.company && (
+                              <span className="text-slate-500 font-normal">@ {exp.company}</span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-500 flex items-center gap-2">
+                            <span>
+                              {exp.startDate || "Start"} – {exp.isCurrent ? "Present" : exp.endDate || "End"}
+                            </span>
+                            <span className="text-slate-300">•</span>
+                            <span className="text-indigo-600 font-medium">
+                              {exp.bullets.length} {exp.bullets.length === 1 ? "bullet" : "bullets"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleJobExpand(exp.id);
+                          }}
+                          className="px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteJob(exp.id);
+                          }}
+                          className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                          title="Delete position"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Expanded Active Job Editor (Clean, spacious, unnested)
+                return (
                   <div
-                    onClick={() => toggleJobExpand(exp.id)}
-                    className="p-3 bg-white flex justify-between items-center cursor-pointer hover:bg-slate-50 select-none border-b border-slate-200"
+                    key={exp.id}
+                    className="rounded-lg bg-white border-2 border-indigo-500/80 shadow-xs overflow-hidden transition-all"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-6 h-6 rounded-md bg-indigo-50 border border-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold font-mono">
-                        {expIdx + 1}
+                    {/* Active Job Header Bar */}
+                    <div
+                      onClick={() => toggleJobExpand(exp.id)}
+                      className="px-3.5 py-2.5 bg-indigo-50/60 border-b border-indigo-100 flex justify-between items-center cursor-pointer select-none"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded bg-indigo-600 text-white font-mono text-xs font-bold flex items-center justify-center shrink-0">
+                          {expIdx + 1}
+                        </div>
+                        <span className="text-xs font-bold text-indigo-950">
+                          Editing: {exp.jobTitle || "Untitled Position"}
+                        </span>
                       </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-900">
-                          {exp.jobTitle || "Untitled Role"}{" "}
-                          <span className="text-slate-500 font-normal">
-                            {exp.company ? `@ ${exp.company}` : ""}
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-slate-500 font-mono">
-                          {exp.startDate || "Start"} – {exp.isCurrent ? "Present" : exp.endDate || "End"}
-                          {exp.location ? ` • ${exp.location}` : ""}
-                        </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteJob(exp.id);
+                          }}
+                          className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                          title="Delete position"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                        <ChevronUp className="w-4 h-4 text-indigo-600" />
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteJob(exp.id);
-                        }}
-                        className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                        title="Delete position"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                      {isExpanded ? (
-                        <ChevronUp className="w-4 h-4 text-slate-400" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4 text-slate-400" />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Job Expanded Body */}
-                  {isExpanded && (
-                    <div className="p-3.5 space-y-3.5 bg-slate-50/60">
-                      {/* Inputs Row 1 */}
+                    {/* Active Job Body */}
+                    <div className="p-4 space-y-4">
+                      {/* Row 1: Title & Company */}
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
@@ -478,8 +539,8 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
                             type="text"
                             value={exp.jobTitle}
                             onChange={(e) => handleUpdateJob(exp.id, { jobTitle: e.target.value })}
-                            placeholder="e.g. Lead Software Engineer"
-                            className="w-full px-3 py-1.5 rounded-md bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                            placeholder="e.g. Senior Product Designer"
+                            className="w-full px-3 py-2 rounded-md bg-white border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
                           />
                         </div>
                         <div>
@@ -491,13 +552,13 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
                             value={exp.company}
                             onChange={(e) => handleUpdateJob(exp.id, { company: e.target.value })}
                             placeholder="e.g. Stripe"
-                            className="w-full px-3 py-1.5 rounded-md bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                            className="w-full px-3 py-2 rounded-md bg-white border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
                           />
                         </div>
                       </div>
 
-                      {/* Inputs Row 2: Location & Dates */}
-                      <div className="grid grid-cols-3 gap-2.5">
+                      {/* Row 2: Location & Dates */}
+                      <div className="grid grid-cols-3 gap-2.5 items-end">
                         <div>
                           <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
                             Location
@@ -506,8 +567,8 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
                             type="text"
                             value={exp.location || ""}
                             onChange={(e) => handleUpdateJob(exp.id, { location: e.target.value })}
-                            placeholder="e.g. Remote / New York, NY"
-                            className="w-full px-2.5 py-1.5 rounded-md bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                            placeholder="e.g. San Francisco, CA"
+                            className="w-full px-2.5 py-1.5 rounded-md bg-white border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
                           />
                         </div>
                         <div>
@@ -518,167 +579,207 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
                             type="text"
                             value={exp.startDate}
                             onChange={(e) => handleUpdateJob(exp.id, { startDate: e.target.value })}
-                            placeholder="e.g. 2022 or Jan 2022"
-                            className="w-full px-2.5 py-1.5 rounded-md bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                            placeholder="e.g. 2022"
+                            className="w-full px-2.5 py-1.5 rounded-md bg-white border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
                           />
                         </div>
                         <div>
-                          <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                            End Date
-                          </label>
-                          <div className="flex gap-1.5 items-center">
-                            <input
-                              type="text"
-                              disabled={exp.isCurrent}
-                              value={exp.isCurrent ? "Present" : exp.endDate}
-                              onChange={(e) => handleUpdateJob(exp.id, { endDate: e.target.value })}
-                              placeholder="e.g. 2024"
-                              className="w-full px-2.5 py-1.5 rounded-md bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 disabled:bg-slate-100 disabled:text-slate-400 transition-all"
-                            />
+                          <div className="flex justify-between items-center mb-1">
+                            <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+                              End Date
+                            </label>
                             <button
                               type="button"
                               onClick={() => handleUpdateJob(exp.id, { isCurrent: !exp.isCurrent })}
-                              className={`px-2 py-1.5 rounded-md text-[10px] font-semibold border shrink-0 cursor-pointer transition-colors ${
+                              className={`text-[10px] font-semibold px-1.5 py-0.5 rounded cursor-pointer transition-colors ${
                                 exp.isCurrent
-                                  ? "bg-indigo-50 text-indigo-700 border-indigo-200"
-                                  : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
+                                  ? "bg-indigo-100 text-indigo-800 font-bold"
+                                  : "text-slate-500 hover:text-slate-800"
                               }`}
                             >
-                              Current
+                              {exp.isCurrent ? "✓ Present" : "Present?"}
                             </button>
                           </div>
+                          <input
+                            type="text"
+                            disabled={exp.isCurrent}
+                            value={exp.isCurrent ? "Present" : exp.endDate}
+                            onChange={(e) => handleUpdateJob(exp.id, { endDate: e.target.value })}
+                            placeholder="e.g. 2024"
+                            className="w-full px-2.5 py-1.5 rounded-md bg-white border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 disabled:bg-slate-100 disabled:text-slate-400 transition-all"
+                          />
                         </div>
                       </div>
 
-                      {/* Brief 1-2 sentence description box */}
-                      <div className="p-3 bg-indigo-50/60 rounded-lg border border-indigo-100 space-y-2">
-                        <div className="flex justify-between items-center">
-                          <label className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                      {/* AI Bullets Generator (On-Demand / Clean Drafter) */}
+                      <div className="border-t border-slate-100 pt-3">
+                        <div className="flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={() => setShowAiDrafterFor(isDrafterOpen ? null : exp.id)}
+                            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1.5 cursor-pointer py-1"
+                          >
                             <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>Quick Job Description / Rough Notes</span>
-                          </label>
-                          <span className="text-[10px] text-indigo-600 font-semibold">Only 1-2 sentences needed</span>
+                            <span>{isDrafterOpen ? "Hide AI Drafter" : "Draft bullets from rough notes using AI"}</span>
+                          </button>
+                          <span className="text-[10px] text-slate-400">Optional AI assistant</span>
                         </div>
 
-                        <textarea
-                          rows={2}
-                          value={exp.rawNotes || ""}
-                          onChange={(e) => handleUpdateJob(exp.id, { rawNotes: e.target.value })}
-                          placeholder="e.g. Built automated customer support bot with Node and OpenAI. Reduced ticket resolution time by 30% and managed team of 3."
-                          className="w-full px-3 py-2 rounded-md bg-white border border-indigo-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none transition-all"
-                        />
-
-                        <button
-                          onClick={() => handleGenerateBullets(exp.id)}
-                          disabled={isGenerating}
-                          className="w-full py-2 px-3 rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
-                        >
-                          {isGenerating ? (
-                            <>
-                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                              <span>Gemini AI is crafting high-impact bullets...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                              <span>Generate Impactful Bullets with AI</span>
-                            </>
-                          )}
-                        </button>
+                        {isDrafterOpen && (
+                          <div className="mt-2.5 p-3 bg-indigo-50/50 rounded-lg border border-indigo-100 space-y-2">
+                            <textarea
+                              rows={2}
+                              value={exp.rawNotes || ""}
+                              onChange={(e) => handleUpdateJob(exp.id, { rawNotes: e.target.value })}
+                              placeholder="Type 1-2 rough notes: e.g. Managed 4 devs, launched mobile app with 50k downloads, reduced AWS bill by 20%..."
+                              className="w-full px-3 py-2 rounded-md bg-white border border-indigo-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none transition-all"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleGenerateBullets(exp.id)}
+                              disabled={isGenerating}
+                              className="w-full py-1.5 px-3 rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+                            >
+                              {isGenerating ? (
+                                <>
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                  <span>Crafting executive bullets...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                                  <span>Generate 3 Executive Bullets</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
                       </div>
 
-                      {/* Rendered Bullets List with inline AI polishers */}
-                      <div className="space-y-2.5 pt-1">
+                      {/* Clean Bullet Points List */}
+                      <div className="space-y-2 pt-1 border-t border-slate-100">
                         <div className="flex justify-between items-center">
-                          <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                            Resume Bullet Points ({exp.bullets.length})
+                          <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                            Bullet Points ({exp.bullets.length})
                           </span>
                           <button
+                            type="button"
                             onClick={() => handleAddBullet(exp.id)}
-                            className="text-[11px] text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer font-bold"
+                            className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer font-bold py-0.5"
                           >
-                            <Plus className="w-3 h-3" />
+                            <Plus className="w-3.5 h-3.5" />
                             <span>Add bullet</span>
                           </button>
                         </div>
 
-                        {exp.bullets.map((bullet, bIdx) => (
-                          <div
-                            key={bIdx}
-                            className="p-2.5 rounded-md bg-white border border-slate-200 space-y-2 group hover:border-slate-300 transition-all shadow-xs"
-                          >
-                            <div className="flex gap-2 items-start">
-                              <span className="text-slate-400 text-xs font-mono mt-1.5">•</span>
-                              <textarea
-                                rows={2}
-                                value={bullet}
-                                onChange={(e) => handleBulletChange(exp.id, bIdx, e.target.value)}
-                                className="flex-1 bg-transparent text-xs text-slate-800 placeholder-slate-400 focus:outline-none resize-none leading-relaxed"
-                              />
-                              <button
-                                onClick={() => handleDeleteBullet(exp.id, bIdx)}
-                                className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
-                                title="Remove bullet"
+                        <div className="space-y-2">
+                          {exp.bullets.map((bullet, bIdx) => {
+                            const bulletKey = `${exp.id}-${bIdx}`;
+                            const isPolishOpen = openPolishMenuKey === bulletKey;
+
+                            return (
+                              <div
+                                key={bIdx}
+                                className="p-2.5 rounded-lg bg-slate-50/70 border border-slate-200/90 hover:border-slate-300 focus-within:border-indigo-400 focus-within:bg-white transition-all space-y-2"
                               >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
+                                <div className="flex gap-2 items-start">
+                                  <span className="text-slate-400 text-xs font-mono mt-1 select-none">•</span>
+                                  <textarea
+                                    rows={2}
+                                    value={bullet}
+                                    onChange={(e) => handleBulletChange(exp.id, bIdx, e.target.value)}
+                                    placeholder="Action verb + core responsibility + measurable result..."
+                                    className="flex-1 bg-transparent text-xs text-slate-800 placeholder-slate-400 focus:outline-none resize-none leading-relaxed"
+                                  />
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => setOpenPolishMenuKey(isPolishOpen ? null : bulletKey)}
+                                      className={`p-1 rounded text-xs transition-colors cursor-pointer flex items-center gap-1 ${
+                                        isPolishOpen
+                                          ? "bg-indigo-100 text-indigo-700 font-bold"
+                                          : "text-slate-400 hover:text-indigo-600 hover:bg-slate-100"
+                                      }`}
+                                      title="AI Polish Tools"
+                                    >
+                                      <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteBullet(exp.id, bIdx)}
+                                      className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                                      title="Delete bullet"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
 
-                            {/* Compact AI Polish Buttons */}
-                            <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
-                              <span className="text-[10px] text-slate-400 font-medium">AI Polish:</span>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  onClick={() => handlePolishBullet(exp.id, bIdx, "quantify")}
-                                  disabled={polishingBulletKey === `${exp.id}-${bIdx}-quantify`}
-                                  className="px-2 py-0.5 rounded hover:bg-emerald-50 text-[10px] text-slate-600 hover:text-emerald-700 font-medium flex items-center gap-1 transition-colors cursor-pointer border border-slate-200"
-                                  title="Add realistic metrics and percentage impact"
-                                >
-                                  {polishingBulletKey === `${exp.id}-${bIdx}-quantify` ? (
-                                    <RefreshCw className="w-2.5 h-2.5 animate-spin text-emerald-600" />
-                                  ) : (
-                                    <TrendingUp className="w-2.5 h-2.5 text-emerald-600" />
-                                  )}
-                                  <span>+ Metric</span>
-                                </button>
+                                {/* On-demand Polish Tools (Only shown when requested for this bullet) */}
+                                {isPolishOpen && (
+                                  <div className="flex items-center justify-between pt-2 border-t border-slate-200/70 bg-white p-1.5 rounded-md text-[10.5px]">
+                                    <span className="text-slate-500 font-semibold flex items-center gap-1">
+                                      <Sparkles className="w-3 h-3 text-indigo-600" />
+                                      <span>1-Click Polish:</span>
+                                    </span>
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => handlePolishBullet(exp.id, bIdx, "quantify")}
+                                        disabled={polishingBulletKey === `${bulletKey}-quantify`}
+                                        className="px-2 py-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-medium flex items-center gap-1 transition-colors cursor-pointer border border-emerald-200"
+                                        title="Add realistic metrics and percentage impact"
+                                      >
+                                        {polishingBulletKey === `${bulletKey}-quantify` ? (
+                                          <RefreshCw className="w-2.5 h-2.5 animate-spin text-emerald-600" />
+                                        ) : (
+                                          <TrendingUp className="w-2.5 h-2.5 text-emerald-600" />
+                                        )}
+                                        <span>+ Metrics</span>
+                                      </button>
 
-                                <button
-                                  onClick={() => handlePolishBullet(exp.id, bIdx, "shorten")}
-                                  disabled={polishingBulletKey === `${exp.id}-${bIdx}-shorten`}
-                                  className="px-2 py-0.5 rounded hover:bg-amber-50 text-[10px] text-slate-600 hover:text-amber-700 font-medium flex items-center gap-1 transition-colors cursor-pointer border border-slate-200"
-                                  title="Make bullet more concise to fit 1 line"
-                                >
-                                  {polishingBulletKey === `${exp.id}-${bIdx}-shorten` ? (
-                                    <RefreshCw className="w-2.5 h-2.5 animate-spin text-amber-600" />
-                                  ) : (
-                                    <Scissors className="w-2.5 h-2.5 text-amber-600" />
-                                  )}
-                                  <span>✂ Trim</span>
-                                </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handlePolishBullet(exp.id, bIdx, "shorten")}
+                                        disabled={polishingBulletKey === `${bulletKey}-shorten`}
+                                        className="px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 font-medium flex items-center gap-1 transition-colors cursor-pointer border border-amber-200"
+                                        title="Make bullet concise to fit 1 line"
+                                      >
+                                        {polishingBulletKey === `${bulletKey}-shorten` ? (
+                                          <RefreshCw className="w-2.5 h-2.5 animate-spin text-amber-600" />
+                                        ) : (
+                                          <Scissors className="w-2.5 h-2.5 text-amber-600" />
+                                        )}
+                                        <span>✂ 1-Line</span>
+                                      </button>
 
-                                <button
-                                  onClick={() => handlePolishBullet(exp.id, bIdx, "strengthen")}
-                                  disabled={polishingBulletKey === `${exp.id}-${bIdx}-strengthen`}
-                                  className="px-2 py-0.5 rounded hover:bg-indigo-50 text-[10px] text-slate-600 hover:text-indigo-700 font-medium flex items-center gap-1 transition-colors cursor-pointer border border-slate-200"
-                                  title="Upgrade to strong action verbs"
-                                >
-                                  {polishingBulletKey === `${exp.id}-${bIdx}-strengthen` ? (
-                                    <RefreshCw className="w-2.5 h-2.5 animate-spin text-indigo-600" />
-                                  ) : (
-                                    <Zap className="w-2.5 h-2.5 text-indigo-600" />
-                                  )}
-                                  <span>🚀 Power</span>
-                                </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handlePolishBullet(exp.id, bIdx, "strengthen")}
+                                        disabled={polishingBulletKey === `${bulletKey}-strengthen`}
+                                        className="px-2 py-1 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-medium flex items-center gap-1 transition-colors cursor-pointer border border-indigo-200"
+                                        title="Upgrade to executive action verbs"
+                                      >
+                                        {polishingBulletKey === `${bulletKey}-strengthen` ? (
+                                          <RefreshCw className="w-2.5 h-2.5 animate-spin text-indigo-600" />
+                                        ) : (
+                                          <Zap className="w-2.5 h-2.5 text-indigo-600" />
+                                        )}
+                                        <span>🚀 Power Verb</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                          </div>
-                        ))}
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -923,10 +1024,10 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
 
         {/* TAB 5: EDUCATION */}
         {activeTab === "education" && (
-          <div className="space-y-4">
-            <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
+          <div className="space-y-3">
+            <div className="flex justify-between items-center bg-slate-50/80 p-3 rounded-lg border border-slate-200/80">
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
                   <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />
                   <span>Education</span>
                 </h3>
@@ -934,9 +1035,11 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
               </div>
 
               <button
+                type="button"
                 onClick={() => {
+                  const newId = `edu-${Date.now()}`;
                   const newEdu: EducationItem = {
-                    id: `edu-${Date.now()}`,
+                    id: newId,
                     degree: "B.S. in Field of Study",
                     school: "University Name",
                     location: "City, State",
@@ -944,109 +1047,186 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
                     gpaOrHonors: "",
                   };
                   onChange({ ...resume, education: [...resume.education, newEdu] });
+                  setActiveEduId(newId);
                 }}
-                className="px-3 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 border border-slate-200 cursor-pointer shadow-xs"
+                className="px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add School</span>
               </button>
             </div>
 
-            {resume.education.map((edu, idx) => (
-              <div
-                key={edu.id}
-                className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-3 shadow-xs"
-              >
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-slate-900">Degree #{idx + 1}</span>
-                  <button
-                    onClick={() => {
-                      onChange({
-                        ...resume,
-                        education: resume.education.filter((e) => e.id !== edu.id),
-                      });
-                    }}
-                    className="text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+            <div className="space-y-2.5">
+              {resume.education.map((edu, idx) => {
+                const isActive = activeEduId === edu.id;
+
+                if (!isActive) {
+                  return (
+                    <div
+                      key={edu.id}
+                      onClick={() => toggleEduExpand(edu.id)}
+                      className="p-3 rounded-lg bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-xs flex items-center justify-between cursor-pointer transition-all group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-6 h-6 rounded bg-slate-100 group-hover:bg-indigo-50 text-slate-600 group-hover:text-indigo-700 font-mono text-xs font-bold flex items-center justify-center shrink-0 transition-colors">
+                          {idx + 1}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-800 truncate">
+                            {edu.degree || "Degree"} {edu.school && <span className="text-slate-500 font-normal">@ {edu.school}</span>}
+                          </div>
+                          <div className="text-[11px] text-slate-500">
+                            {edu.graduationYear || "Graduation Year"} {edu.location ? `• ${edu.location}` : ""}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleEduExpand(edu.id);
+                          }}
+                          className="px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onChange({
+                              ...resume,
+                              education: resume.education.filter((eItem) => eItem.id !== edu.id),
+                            });
+                          }}
+                          className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                          title="Delete education"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    key={edu.id}
+                    className="rounded-lg bg-white border-2 border-indigo-500/80 shadow-xs overflow-hidden transition-all"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                    <div
+                      onClick={() => toggleEduExpand(edu.id)}
+                      className="px-3.5 py-2.5 bg-indigo-50/60 border-b border-indigo-100 flex justify-between items-center cursor-pointer select-none"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded bg-indigo-600 text-white font-mono text-xs font-bold flex items-center justify-center shrink-0">
+                          {idx + 1}
+                        </div>
+                        <span className="text-xs font-bold text-indigo-950">
+                          Editing: {edu.degree || "Degree"}
+                        </span>
+                      </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                      Degree / Major
-                    </label>
-                    <input
-                      type="text"
-                      value={edu.degree}
-                      onChange={(e) => {
-                        const updated = resume.education.map((x) =>
-                          x.id === edu.id ? { ...x, degree: e.target.value } : x
-                        );
-                        onChange({ ...resume, education: updated });
-                      }}
-                      placeholder="e.g. B.S. in Computer Science"
-                      className="w-full px-3 py-1.5 rounded-md bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                      School / University
-                    </label>
-                    <input
-                      type="text"
-                      value={edu.school}
-                      onChange={(e) => {
-                        const updated = resume.education.map((x) =>
-                          x.id === edu.id ? { ...x, school: e.target.value } : x
-                        );
-                        onChange({ ...resume, education: updated });
-                      }}
-                      placeholder="e.g. University of California, Berkeley"
-                      className="w-full px-3 py-1.5 rounded-md bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                    />
-                  </div>
-                </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onChange({
+                              ...resume,
+                              education: resume.education.filter((eItem) => eItem.id !== edu.id),
+                            });
+                          }}
+                          className="p-1 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                          title="Delete education"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                        <ChevronUp className="w-4 h-4 text-indigo-600" />
+                      </div>
+                    </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                      Graduation Year
-                    </label>
-                    <input
-                      type="text"
-                      value={edu.graduationYear}
-                      onChange={(e) => {
-                        const updated = resume.education.map((x) =>
-                          x.id === edu.id ? { ...x, graduationYear: e.target.value } : x
-                        );
-                        onChange({ ...resume, education: updated });
-                      }}
-                      placeholder="e.g. 2022"
-                      className="w-full px-3 py-1.5 rounded-md bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                    />
+                    <div className="p-4 space-y-3.5">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
+                            Degree / Major
+                          </label>
+                          <input
+                            type="text"
+                            value={edu.degree}
+                            onChange={(e) => {
+                              const updated = resume.education.map((x) =>
+                                x.id === edu.id ? { ...x, degree: e.target.value } : x
+                              );
+                              onChange({ ...resume, education: updated });
+                            }}
+                            placeholder="e.g. B.S. in Computer Science"
+                            className="w-full px-3 py-2 rounded-md bg-white border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
+                            School / University
+                          </label>
+                          <input
+                            type="text"
+                            value={edu.school}
+                            onChange={(e) => {
+                              const updated = resume.education.map((x) =>
+                                x.id === edu.id ? { ...x, school: e.target.value } : x
+                              );
+                              onChange({ ...resume, education: updated });
+                            }}
+                            placeholder="e.g. UC Berkeley"
+                            className="w-full px-3 py-2 rounded-md bg-white border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
+                            Graduation Year
+                          </label>
+                          <input
+                            type="text"
+                            value={edu.graduationYear}
+                            onChange={(e) => {
+                              const updated = resume.education.map((x) =>
+                                x.id === edu.id ? { ...x, graduationYear: e.target.value } : x
+                              );
+                              onChange({ ...resume, education: updated });
+                            }}
+                            placeholder="e.g. 2022"
+                            className="w-full px-3 py-2 rounded-md bg-white border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
+                            Honors / GPA (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={edu.gpaOrHonors || ""}
+                            onChange={(e) => {
+                              const updated = resume.education.map((x) =>
+                                x.id === edu.id ? { ...x, gpaOrHonors: e.target.value } : x
+                              );
+                              onChange({ ...resume, education: updated });
+                            }}
+                            placeholder="e.g. Magna Cum Laude • 3.8 GPA"
+                            className="w-full px-3 py-2 rounded-md bg-white border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-1">
-                      Honors / GPA (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={edu.gpaOrHonors || ""}
-                      onChange={(e) => {
-                        const updated = resume.education.map((x) =>
-                          x.id === edu.id ? { ...x, gpaOrHonors: e.target.value } : x
-                        );
-                        onChange({ ...resume, education: updated });
-                      }}
-                      placeholder="e.g. Magna Cum Laude • 3.9 GPA"
-                      className="w-full px-3 py-1.5 rounded-md bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
+                );
+              })}
+            </div>
           </div>
         )}
 

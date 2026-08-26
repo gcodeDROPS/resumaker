@@ -337,20 +337,47 @@ Rules:
   }
 });
 
-// 4. Suggest skills based on job history
+// 4. Suggest skills strictly aligned with summary and job history
 app.post("/api/suggest-skills", async (req, res) => {
   try {
-    const { targetRole, experiences } = req.body;
+    const { targetRole, summary, experiences, currentSkills } = req.body;
     const ai = getGeminiClient();
 
-    const prompt = `Analyze this candidate's target role and work experience to extract and recommend the top 10-14 most relevant, in-demand skills (technical skills, tools/software/equipment, and core competencies) that fit cleanly into a 1-page resume skills section.
+    const prompt = `You are a premier career architect and ATS resume skills optimizer.
+Analyze this candidate's target role, professional summary, and full work experience history.
+Task: Extract, generate, and recommend 10-14 relevant, highly accurate skills (technical/hard skills, tools/equipment/platforms, and core domain competencies) that STRICTLY ALIGN with their actual job background, summary, and industry.
 
-Target Role: ${targetRole || "Professional"}
-Experience History: ${JSON.stringify(experiences || [])}
+Candidate Target Role / Title: "${targetRole || "Professional"}"
+Candidate Summary: "${summary || "None provided"}"
+Candidate Work Experience Entries:
+${JSON.stringify(experiences || [], null, 2)}
+${currentSkills && currentSkills.length > 0 ? `Current Skill List (for reference): ${JSON.stringify(currentSkills)}` : ""}
 
-CRITICAL RULES:
-- The suggested skills MUST match the candidate's actual domain (e.g., if experience includes Cashier/McDonald's/Retail: include POS Systems, Cash Handling & Reconciliation, Customer Service, Food Safety & Sanitation, Order Accuracy, Inventory Restocking, Speed of Service).
-- Do not suggest software engineering skills (like React or AWS) unless the candidate actually has software engineering experience.`;
+CRITICAL ALIGNMENT & EXTRACTION RULES:
+1. STRICT ALIGNMENT WITH SUMMARY & WORK EXPERIENCE:
+   - Carefully analyze the candidate's summary and every job role, company, duty description, and bullet point.
+   - The generated skills MUST directly reflect and align with the specific tasks, tools, procedures, methodologies, and responsibilities mentioned in their summary and experience.
+   - For Food Service / Restaurant / Kitchen (e.g. Cook, Line Cook, Prep, Chef, Grill):
+     * Skills MUST focus on: Food Safety (ServSafe/HACCP), Culinary Prep & Knife Skills, Station Management (Grill/Fryer/Assembly), Recipe Adherence & Portion Control, Kitchen Sanitation, Ticket Execution Speed, Inventory & Restocking.
+   - For Cashier / Retail / Fast Food Counter:
+     * Skills MUST focus on: POS Systems (NCR, Aloha, Square), Cash Handling & Drawer Balancing, Customer Service Excellence, Order Accuracy & Speed, Upselling & Promotions, Stock Replenishment.
+   - For Barista / Coffee:
+     * Skills MUST focus on: Espresso Beverage Preparation, Latte Art & Steaming, Grinder Calibration, Order Expediting, Dairy & Food Temperature Standards.
+   - For Customer Service / Support:
+     * Skills MUST focus on: CRM Software (Zendesk, Salesforce), Omnichannel Support (Phone/Email/Chat), Ticket Resolution & SLAs, De-escalation & Conflict Resolution, Customer Empathy.
+   - For Healthcare / Nursing / Medical:
+     * Skills MUST focus on: Electronic Health Records (EHR/Epic/Cerner), Patient Vital Monitoring, Medication Administration, HIPAA Compliance, Triage & Assessment, Patient Care.
+   - For Warehouse / Logistics / Driver:
+     * Skills MUST focus on: Forklift Operation (OSHA), RF Barcode Scanning, Order Picking & Packing, Inventory Management (WMS), Route Navigation, Shipping & Receiving.
+   - For Tech / Software / IT:
+     * Skills MUST reflect the actual languages, frameworks, cloud tools, databases, and CI/CD tools mentioned in their experience (e.g. React, Node.js, Go, Python, AWS, Docker, REST/GraphQL, Agile/Scrum).
+   - For Management / Leadership:
+     * Skills MUST focus on: Team Leadership & Coaching, Shift Scheduling, KPI & Performance Tracking, Labor Cost Optimization, Workflow Improvement.
+
+2. ACCURACY CONSTRAINT:
+   - NEVER suggest unrelated skills (e.g., do NOT give software programming skills to a restaurant cook or cashier, and do NOT give kitchen culinary skills to a software developer).
+   - Prioritize high-value ATS industry keywords.
+   - Return concise 1-4 word skill phrases.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3.7-flash",
@@ -373,18 +400,50 @@ CRITICAL RULES:
     res.json(parsed);
   } catch (error: any) {
     console.error("Error in /api/suggest-skills:", error);
-    const expText = JSON.stringify(req.body.experiences || "").toLowerCase();
-    if (expText.includes("cashier") || expText.includes("cahsier") || expText.includes("mcdonad") || expText.includes("food") || expText.includes("retail")) {
+    const combinedContext = `${req.body.targetRole || ""} ${req.body.summary || ""} ${JSON.stringify(req.body.experiences || "")}`.toLowerCase();
+    
+    // Domain-aware fallback matching
+    if (combinedContext.includes("cook") || combinedContext.includes("chef") || combinedContext.includes("grill") || combinedContext.includes("prep") || combinedContext.includes("kitchen") || combinedContext.includes("culinary")) {
       res.status(500).json({
-        technicalSkills: ["POS Systems (NCR/Aloha)", "Cash Handling & Drawer Balancing", "Food Safety (HACCP/ServSafe)"],
-        toolsAndPlatforms: ["Drive-Thru Order Systems", "Inventory Trackers", "Debit/Credit Terminals"],
-        coreCompetencies: ["Customer Service Excellence", "Speed of Service", "Order Accuracy", "Conflict Resolution", "Teamwork"],
+        technicalSkills: ["Food Safety (ServSafe/HACCP)", "Grill & Fry Station Operations", "Recipe Adherence & Portioning"],
+        toolsAndPlatforms: ["Commercial Kitchen Equipment", "Temperature Logging Systems", "Order Ticket POS"],
+        coreCompetencies: ["Ticket Execution Speed", "Kitchen Sanitation", "Inventory Restocking", "Teamwork Under Pressure"],
+      });
+    } else if (combinedContext.includes("cashier") || combinedContext.includes("cahsier") || combinedContext.includes("mcdonad") || combinedContext.includes("counter") || combinedContext.includes("drive-thru")) {
+      res.status(500).json({
+        technicalSkills: ["POS Systems (NCR/Aloha)", "Cash Handling & Drawer Balancing", "Food Safety Standards"],
+        toolsAndPlatforms: ["Drive-Thru Communication Headsets", "Debit/Credit Payment Terminals", "Inventory Checkers"],
+        coreCompetencies: ["Customer Service Excellence", "Speed of Service", "Order Accuracy", "Upselling Promotions", "Conflict Resolution"],
+      });
+    } else if (combinedContext.includes("retail") || combinedContext.includes("store") || combinedContext.includes("merchandis")) {
+      res.status(500).json({
+        technicalSkills: ["POS Checkout Systems", "Visual Merchandising", "Inventory Audits & Restocking"],
+        toolsAndPlatforms: ["Barcode Scanners", "Stockroom Management Tools", "Card Readers"],
+        coreCompetencies: ["Customer Engagement", "Product Knowledge", "Sales Floor Organization", "Loss Prevention"],
+      });
+    } else if (combinedContext.includes("support") || combinedContext.includes("customer service") || combinedContext.includes("call center")) {
+      res.status(500).json({
+        technicalSkills: ["Ticket Resolution & SLAs", "Omnichannel Customer Support", "Issue Troubleshooting"],
+        toolsAndPlatforms: ["Zendesk / Salesforce CRM", "Intercom", "VoIP Phone Systems"],
+        coreCompetencies: ["Customer Empathy", "De-escalation Techniques", "Written Communication", "Process Documentation"],
+      });
+    } else if (combinedContext.includes("software") || combinedContext.includes("developer") || combinedContext.includes("engineer")) {
+      res.status(500).json({
+        technicalSkills: ["Full-Stack Web Development", "REST & GraphQL APIs", "Microservices Architecture"],
+        toolsAndPlatforms: ["TypeScript / React / Node.js", "Docker & Kubernetes", "Git & CI/CD Pipelines"],
+        coreCompetencies: ["System Design", "Code Review & Quality", "Agile/Scrum Methodologies", "Performance Optimization"],
+      });
+    } else if (combinedContext.includes("nurse") || combinedContext.includes("medical") || combinedContext.includes("patient")) {
+      res.status(500).json({
+        technicalSkills: ["Patient Vital Monitoring", "Medication Administration", "HIPAA & Clinical Compliance"],
+        toolsAndPlatforms: ["Electronic Health Records (Epic/Cerner)", "Medical Diagnostic Equipment"],
+        coreCompetencies: ["Patient Care & Advocacy", "Triage & Emergency Response", "Interdisciplinary Communication"],
       });
     } else {
       res.status(500).json({
-        technicalSkills: ["Project Management", "Data Analysis", "Process Optimization"],
-        toolsAndPlatforms: ["MS Office / Google Workspace", "Slack", "Jira"],
-        coreCompetencies: ["Cross-Functional Collaboration", "Problem Solving", "Quality Assurance"],
+        technicalSkills: ["Operational Workflow Management", "Process Optimization", "Performance Analytics"],
+        toolsAndPlatforms: ["MS Office Suite", "Google Workspace", "Slack / Project Management Tools"],
+        coreCompetencies: ["Cross-Functional Collaboration", "Problem Solving", "Quality Assurance", "Time Management"],
       });
     }
   }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ResumeData, StylingConfig } from "./types";
-import { SAMPLE_SOFTWARE_ENGINEER } from "./data/sampleResumes";
+import { SAMPLE_SOFTWARE_ENGINEER, BLANK_RESUME } from "./data/sampleResumes";
 import { ResumePreview } from "./components/ResumePreview";
 import { EditorPanel } from "./components/EditorPanel";
 import { Toolbar } from "./components/Toolbar";
@@ -15,7 +15,6 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-const STORAGE_KEY_RESUME = "onepage_resume_ai_data_v1";
 const STORAGE_KEY_STYLING = "onepage_resume_ai_styling_v1";
 
 const DEFAULT_STYLING: StylingConfig = {
@@ -34,16 +33,8 @@ const DEFAULT_STYLING: StylingConfig = {
 export default function App() {
   const previewContainerRef = useRef<HTMLElement>(null);
 
-  // Resume data state with localStorage initialization
-  const [resume, setResume] = useState<ResumeData>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_RESUME);
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error("Failed to load saved resume", e);
-    }
-    return SAMPLE_SOFTWARE_ENGINEER;
-  });
+  // Resume starts as a clean blank slate on every visit / page refresh
+  const [resume, setResume] = useState<ResumeData>(() => BLANK_RESUME);
 
   // Styling config state
   const [styling, setStyling] = useState<StylingConfig>(() => {
@@ -62,14 +53,14 @@ export default function App() {
   const [isExportingPDF, setIsExportingPDF] = useState<boolean>(false);
   const [activeViewMode, setActiveViewMode] = useState<"split" | "editor" | "preview">("split");
 
-  // Save to localStorage on change
+  // Clean slate on every visit / refresh
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY_RESUME, JSON.stringify(resume));
+      localStorage.removeItem("onepage_resume_ai_data_v1");
     } catch (e) {
       console.error(e);
     }
-  }, [resume]);
+  }, []);
 
   useEffect(() => {
     try {
