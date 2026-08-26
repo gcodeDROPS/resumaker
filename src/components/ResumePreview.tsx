@@ -149,6 +149,19 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
   };
 
   const getSpacingClass = () => {
+    if (styling.autoFillPage) {
+      // Gentle, proportional expansion from the top down: expands breathing room without pushing content to bottom
+      switch (styling.lineHeight) {
+        case "compact":
+          return { sectionGap: "space-y-4", itemGap: "space-y-2.5", bulletGap: "space-y-1" };
+        case "spacious":
+          return { sectionGap: "space-y-6", itemGap: "space-y-4", bulletGap: "space-y-2" };
+        case "normal":
+        default:
+          return { sectionGap: "space-y-5", itemGap: "space-y-3", bulletGap: "space-y-1.5" };
+      }
+    }
+
     switch (styling.lineHeight) {
       case "compact":
         return { sectionGap: "space-y-3", itemGap: "space-y-2", bulletGap: "space-y-0.5" };
@@ -234,7 +247,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
         <div ref={contentRef} className="h-full grid grid-cols-12">
           {/* Left Column */}
           <div
-            className="col-span-4 bg-slate-50 border-r border-slate-200 p-6 flex flex-col justify-between"
+            className="col-span-4 bg-slate-50 border-r border-slate-200 p-6 flex flex-col justify-start space-y-4"
             style={{ backgroundColor: `${primaryColor}0d` }}
           >
             <div className="space-y-4">
@@ -343,7 +356,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
           </div>
 
           {/* Right Column */}
-          <div className={`col-span-8 ${getPaddingClass()} flex flex-col ${styling.autoFillPage ? "h-full justify-between" : `justify-start ${spacingClasses.sectionGap}`}`}>
+          <div className={`col-span-8 ${getPaddingClass()} flex flex-col justify-start ${spacingClasses.sectionGap}`}>
             {/* Summary */}
             {styling.showSummary && resume.summary && (
               <div>
@@ -452,7 +465,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
           overflow: "hidden",
         }}
       >
-        <div ref={contentRef} className={`flex flex-col ${styling.autoFillPage ? "h-full justify-between" : `justify-start ${spacingClasses.sectionGap}`}`}>
+        <div ref={contentRef} className={`flex flex-col justify-start ${spacingClasses.sectionGap}`}>
           {/* Header */}
           <div className="text-center pb-3 border-b-2 border-slate-800">
             <h1
@@ -620,7 +633,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
           overflow: "hidden",
         }}
       >
-        <div ref={contentRef} className={`flex flex-col ${styling.autoFillPage ? "h-full justify-between" : `justify-start ${spacingClasses.sectionGap}`}`}>
+        <div ref={contentRef} className={`flex flex-col justify-start ${spacingClasses.sectionGap}`}>
           {/* Header */}
           <div className="flex justify-between items-start border-b-2 pb-3" style={{ borderColor: primaryColor }}>
             <div>
@@ -816,7 +829,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({
         overflow: "hidden",
       }}
     >
-      <div ref={contentRef} className={`flex flex-col ${styling.autoFillPage ? "h-full justify-between" : `justify-start ${spacingClasses.sectionGap}`}`}>
+      <div ref={contentRef} className={`flex flex-col justify-start ${spacingClasses.sectionGap}`}>
         {/* Header */}
         <div className="pb-3 border-b-2" style={{ borderColor: primaryColor }}>
           <div className="flex justify-between items-end">

@@ -28,7 +28,7 @@ const DEFAULT_STYLING: StylingConfig = {
   showProjects: false,
   showCertifications: true,
   showSummary: true,
-  autoFillPage: true,
+  autoFillPage: false,
 };
 
 export default function App() {

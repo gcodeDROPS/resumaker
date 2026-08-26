@@ -154,7 +154,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
                 : "bg-slate-200 text-slate-600 hover:bg-slate-300"
             }`}
-            title="Auto-Fill Spacer: Distribute vertical space evenly across 1 page"
+            title="Auto-Spacer: Add gentle proportional breathing room to fill whitespace from the top down"
           >
             <MoveVertical className="w-2.5 h-2.5" />
             <span className="hidden sm:inline">Spacer:</span>
@@ -354,8 +354,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                   <div className="flex items-center gap-2">
                     <MoveVertical className={`w-3.5 h-3.5 ${styling.autoFillPage ? "text-indigo-600" : "text-slate-400"}`} />
                     <div className="text-left">
-                      <div className="font-bold leading-tight">Auto-Fill Page Spacer</div>
-                      <div className="text-[10px] text-slate-500 font-normal">Distributes vertical gap across 1 page</div>
+                      <div className="font-bold leading-tight">Auto-Spacer (Breathing Room)</div>
+                      <div className="text-[10px] text-slate-500 font-normal">Gently increases section spacing to fill page</div>
                     </div>
                   </div>
                   <span

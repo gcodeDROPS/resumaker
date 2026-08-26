@@ -49,7 +49,7 @@ export function evaluateOnePageFit(
   } else if (fillPercentage < 72) {
     status = "underfilled";
     statusText = `Underfilled (${fillPercentage}% of 1 Page)`;
-    suggestions.push("Enable 'Auto-Fill Page Spacer' to evenly distribute whitespace across the full page.");
+    suggestions.push("Enable 'Auto-Spacer' to add gentle breathing room across sections.");
     suggestions.push("Switch to 'Spacious' font size and relaxed line spacing to balance visual weight.");
     if (!resume.summary || resume.summary.length < 30) {
       suggestions.push("Add a 2-3 sentence Professional Summary to highlight your strengths.");
