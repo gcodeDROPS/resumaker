@@ -63,6 +63,10 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
 
     setGeneratingBulletsFor(expId);
     try {
+      const otherExperiences = resume.experiences.filter((e) => e.id !== expId);
+      const existingBullets = otherExperiences.flatMap((e) => e.bullets.filter(Boolean));
+      const otherJobTitles = otherExperiences.map((e) => `${e.jobTitle || "Role"} at ${e.company || "Company"}`).filter(Boolean);
+
       const res = await fetch("/api/generate-bullets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -72,6 +76,8 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
           description: exp.rawNotes || (exp.jobTitle ? `${exp.jobTitle} at ${exp.company || "company"}` : ""),
           summary: resume.summary,
           targetRole: resume.contact.jobTitle,
+          existingBullets,
+          otherJobTitles,
           count: 3,
         }),
       });

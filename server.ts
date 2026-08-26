@@ -35,39 +35,62 @@ app.get("/api/health", (req, res) => {
 // 1. Generate Bullet Points from job title and 1-2 sentences of job description/summary
 app.post("/api/generate-bullets", async (req, res) => {
   try {
-    const { jobTitle, company, description, summary, targetRole, count = 3 } = req.body;
+    const { jobTitle, company, description, summary, targetRole, existingBullets = [], otherJobTitles = [], count = 3 } = req.body;
     if (!description && !jobTitle && !company) {
       return res.status(400).json({ error: "Job title, company, or description is required" });
     }
 
     const ai = getGeminiClient();
+    const existingBulletList = Array.isArray(existingBullets) && existingBullets.length > 0
+      ? `\n\nCRITICAL ANTI-DUPLICATION RULE:\nThe candidate already has these bullets for other jobs on their resume:\n${existingBullets.map((b: string) => `- "${b}"`).join("\n")}\nYou MUST NOT repeat, paraphrase, or reuse any of the above bullet points, metrics, or phrases. This job entry must have 100% DISTINCT, UNIQUE accomplishments.`
+      : "";
+
     const prompt = `You are a premier executive resume writer specializing in ATS-optimized, high-impact single-page resumes.
 Task: Write exactly ${count} distinctive, highly relevant, metric-driven resume bullet points tailored SPECIFICALLY to this job title and experience summary.
 
 Context:
-- Job Title: "${jobTitle || "Professional"}"
+- Current Target Role to Write: "${jobTitle || "Professional"}"
 - Company / Organization: "${company || "Company"}"
 - Specific Experience Notes / Duties: "${description || ""}"
 ${summary ? `- Candidate Background / Summary: "${summary}"` : ""}
 ${targetRole ? `- Target Career Role: "${targetRole}"` : ""}
+${otherJobTitles.length > 0 ? `- Other Jobs on Resume: ${otherJobTitles.join(", ")}` : ""}${existingBulletList}
 
 CRITICAL RELEVANCE & ACCURACY GUIDELINES:
-1. STRICT ROLE ALIGNMENT:
-   - Every single bullet point MUST be directly and realistically relevant to the specific job title ("${jobTitle || "this role"}").
-   - If the job is in food service or retail (e.g. Cashier, Barista, Server, Store Associate): Focus on cash register throughput, register balancing, speed of service, customer de-escalation, sanitation/safety, and team shift support. Never use technical software buzzwords.
-   - If the job is in customer service / support: Focus on ticket resolution rates (CSAT 95%+), call volume (60+ calls/day), empathy, CRM tools (Zendesk/Salesforce), and escalation handling.
-   - If the job is in healthcare (Nurse, Medical Assistant): Focus on patient triage, vitals recording, EHR charting compliance, infection control, and physician coordination.
-   - If the job is in software / IT: Focus on system architectures, performance optimizations, languages/frameworks, latency reduction, CI/CD, and scalability.
-   - If the job is in sales / marketing: Focus on revenue generated, quota attainment (% to quota), lead generation, campaigns, and customer retention.
-   - If the job is in logistics / warehouse: Focus on order picking accuracy (99.8%+), inventory staging, forklift safety, palletizing, and shipping schedules.
+1. STRICT ROLE DIFFERENTIATION (DO NOT CONFUSE JOBS):
+   - Cook / Line Cook / Grill / Prep / Kitchen / Chef:
+     * Focus on: Meals prepped (150+ per shift), ticket fulfillment times (<4 minutes), grill/fryer/assembly stations, recipe adherence, food safe temperature logs, kitchen sanitation, and HACCP/ServSafe standards.
+     * NEVER write cashier, POS cash register, or customer transaction bullets for a cook!
+   - Cashier / Front Counter / Drive-Thru:
+     * Focus on: POS register transactions (120+/hour), 99.9% cash-handling accuracy, drawer balancing, order speed (<75s), customer greeting, and promo upselling.
+   - Barista / Coffee Specialist:
+     * Focus on: Espresso beverage crafting, latte art, grinder calibration, milk steaming, and speed during morning peak rush.
+   - Server / Waitstaff / Host:
+     * Focus on: Table section management (6-8 tables), menu knowledge, upselling specials, table turns, and guest satisfaction.
+   - Dishwasher / Kitchen Utility:
+     * Focus on: Dish machine operations (500+ items/hr), station sanitization, chemical safety, and kitchen cookware turnaround.
+   - Delivery Driver / Courier:
+     * Focus on: Route navigation, on-time delivery rates (99%+), vehicle safety, and order accuracy checks.
+   - Customer Service / Support:
+     * Focus on: Ticket resolution (65+/day), CSAT scores (95%+), Zendesk/Salesforce CRM, and empathy-driven de-escalation.
+   - Retail Sales Associate:
+     * Focus on: Sales floor customer assistance, inventory replenishment, visual merchandising, and quota attainment.
+   - Software / Tech:
+     * Focus on: Stack technologies, microservices, latency reductions, test coverage, and sprint execution.
+   - Warehouse / Logistics:
+     * Focus on: RF barcode scanning, order picking accuracy (99.8%+), pallet staging, and forklift safety.
+   - Healthcare / Nursing:
+     * Focus on: Patient vital monitoring, triage, EHR charting compliance, and interdisciplinary coordination.
+   - Management / Supervisory:
+     * Focus on: Team leadership, shift scheduling, labor cost reduction, and employee coaching.
 
 2. SPECIFICITY FROM NOTES:
-   - If the user provided notes/description ("${description || ""}"), extract and elevate the exact accomplishments, tools, and achievements mentioned into executive-grade resume statements.
+   - If notes are provided ("${description || ""}"), extract and elevate the exact accomplishments, tools, and duties mentioned.
 
-3. HIGH-IMPACT STRUCTURE & METRICS:
-   - Begin with powerful active verbs (e.g., Spearheaded, Orchestrated, Optimized, Accelerated, Streamlined, Resolved, Coordinated, Reconciled, Engineered).
-   - Integrate realistic, tangible quantitative metrics (e.g., %, $, throughput, time saved).
-   - Word count: 14 to 22 words per bullet so each statement fits on 1-2 printed lines without wrapping awkwardly.
+3. STRUCTURE & METRICS:
+   - Begin each bullet with a strong, distinctive active verb.
+   - Integrate realistic quantitative metrics (%, $, volume, time saved).
+   - Word count: 14 to 22 words per bullet so each statement fits on 1-2 printed lines.
    - Return clean string array without bullet symbols, asterisks, or numbering.`;
 
     const response = await ai.models.generateContent({
@@ -95,58 +118,104 @@ CRITICAL RELEVANCE & ACCURACY GUIDELINES:
   } catch (error: any) {
     console.error("Error in /api/generate-bullets:", error);
     
-    // Dynamic role-aware fallback generator for dozens of professions
-    const title = `${req.body.jobTitle || ""} ${req.body.company || ""} ${req.body.description || ""}`.toLowerCase();
+    // Dynamic role-aware fallback generator for specific professions
+    const title = `${req.body.jobTitle || ""} ${req.body.description || ""}`.toLowerCase();
+    const company = `${req.body.company || ""}`.toLowerCase();
+    const existing = Array.isArray(req.body.existingBullets) ? req.body.existingBullets : [];
     let fallbackBullets: string[] = [];
 
-    if (title.includes("cashier") || title.includes("cahsier") || title.includes("mcdonad") || title.includes("food") || title.includes("crew") || title.includes("barista") || title.includes("server") || title.includes("restaurant") || title.includes("fast food")) {
+    // Cook / Kitchen / Chef / Grill / Prep
+    if (title.includes("cook") || title.includes("chef") || title.includes("grill") || title.includes("prep") || title.includes("kitchen") || title.includes("baker") || title.includes("culinary")) {
       fallbackBullets = [
-        `Processed 120+ customer transactions per hour via POS registers with 99.9% cash-handling accuracy and daily drawer reconciliation.`,
-        `Maintained an average order turnaround time under 85 seconds during peak volume rushes while exceeding customer satisfaction targets.`,
-        `Ensured strict compliance with food safety, sanitation, and hygiene protocols while training 4 new team members.`,
+        `Prepared 150+ high-quality meals per shift adhering to strict recipe specifications, portion controls, and cooking temperatures.`,
+        `Managed grill, fryer, and assembly stations during peak rush periods, sustaining average ticket execution times under 4 minutes.`,
+        `Enforced rigorous food safety, sanitation, and ServSafe temperature compliance while maintaining a spotless station.`,
       ];
-    } else if (title.includes("retail") || title.includes("store") || title.includes("sales associate") || title.includes("merchandiser")) {
+    // Cashier / Front Counter / Drive-thru
+    } else if (title.includes("cashier") || title.includes("cahsier") || title.includes("register") || title.includes("counter") || title.includes("drive-thru") || title.includes("drive thru")) {
       fallbackBullets = [
-        `Assisted 80+ customers daily on the sales floor, driving store revenue and achieving 115% of monthly sales targets.`,
-        `Maintained pristine visual merchandising standards and managed accurate stock replenishment and inventory audits.`,
-        `Resolved customer inquiries and product returns professionally, sustaining a 96% positive feedback rating.`,
+        `Processed 120+ customer transactions per hour via POS register systems with a 99.9% cash-handling accuracy rate.`,
+        `Maintained an average drive-thru and counter order turnaround under 75 seconds during high-volume peak rushes.`,
+        `Upsold promotional menu combos and loyalty rewards programs, contributing to an 8% increase in average ticket size.`,
       ];
+    // Barista
+    } else if (title.includes("barista") || title.includes("coffee") || title.includes("espresso") || company.includes("starbucks") || company.includes("dunkin")) {
+      fallbackBullets = [
+        `Handcrafted 100+ specialty espresso beverages and custom drink orders per shift maintaining consistent quality and presentation.`,
+        `Maintained espresso machine calibration, grinder dosing, and dairy temperature logs to ensure optimal taste and safety.`,
+        `Delivered friendly, fast customer service during peak morning rushes with an average drink turnaround under 60 seconds.`,
+      ];
+    // Server / Waiter
+    } else if (title.includes("server") || title.includes("waiter") || title.includes("waitress") || title.includes("host") || title.includes("dining")) {
+      fallbackBullets = [
+        `Managed a 6-to-8 table dining section in a fast-paced environment, providing attentive service and upselling daily specials.`,
+        `Coordinated seamlessly with kitchen and expo staff to ensure prompt, accurate order delivery and temperature integrity.`,
+        `Processed payments and resolved guest inquiries professionally, sustaining high customer satisfaction and repeat visits.`,
+      ];
+    // Dishwasher / Utility
+    } else if (title.includes("dish") || title.includes("utility") || title.includes("busser") || title.includes("cleaner")) {
+      fallbackBullets = [
+        `Operated commercial dishwashing machinery and sanitation stations, processing 500+ dishware and cookware items per hour.`,
+        `Maintained continuous supply of clean equipment for kitchen and front-of-house staff, preventing service bottlenecks.`,
+        `Ensured strict adherence to chemical handling, kitchen sanitation, and waste disposal safety standards.`,
+      ];
+    // Retail
+    } else if (title.includes("retail") || title.includes("store") || title.includes("sales associate") || title.includes("merchandis")) {
+      fallbackBullets = [
+        `Assisted 80+ customers daily on the sales floor, providing knowledgeable product recommendations and driving repeat business.`,
+        `Maintained visual merchandising standards and managed accurate stock replenishment and inventory audits.`,
+        `Operated POS checkout stations with 100% accuracy and resolved customer return requests with exceptional service.`,
+      ];
+    // Fast food general crew (if not specifically cook or cashier)
+    } else if (title.includes("crew") || title.includes("team member") || company.includes("mcdonad") || company.includes("wendy") || company.includes("burger king") || company.includes("taco bell") || company.includes("chick-fil-a")) {
+      fallbackBullets = [
+        `Cross-trained across front counter, drive-thru, and food prep stations to flexibly support high-volume meal shifts.`,
+        `Assembled customer orders rapidly and accurately, maintaining a team turnaround benchmark under 85 seconds.`,
+        `Upheld strict corporate hygiene, food temperature safety, and dining room cleanliness standards throughout each shift.`,
+      ];
+    // Customer Support
     } else if (title.includes("support") || title.includes("customer service") || title.includes("help desk") || title.includes("call center")) {
       fallbackBullets = [
         `Resolved 65+ customer inquiries daily across phone, chat, and email channels while maintaining a 98% CSAT satisfaction score.`,
         `Documented troubleshooting workflows and created internal knowledge base guides, reducing first-contact resolution time by 22%.`,
         `De-escalated high-priority customer concerns calmly and collaborated with product teams to resolve recurring issues.`,
       ];
+    // Sales
     } else if (title.includes("sales") || title.includes("account exec") || title.includes("bdr") || title.includes("sdr")) {
       fallbackBullets = [
         `Generated $450K+ in new pipeline revenue by qualifying outbound leads and closing key enterprise prospect contracts.`,
         `Consistently exceeded quarterly quota benchmarks by 120% through structured client discovery and tailored presentations.`,
         `Built and nurtured long-term client relationships, achieving an annual account renewal rate of 94%.`,
       ];
+    // Marketing
     } else if (title.includes("marketing") || title.includes("social media") || title.includes("content") || title.includes("growth")) {
       fallbackBullets = [
         `Spearheaded multi-channel digital marketing campaigns that increased organic traffic by 45% and qualified leads by 30%.`,
         `Produced engaging visual and written content across platforms, growing active social followers by 12,000+ in 6 months.`,
         `Analyzed CAC, CTR, and conversion metrics in Google Analytics to optimize ad spend ROI by 28%.`,
       ];
+    // Software
     } else if (title.includes("software") || title.includes("developer") || title.includes("engineer") || title.includes("programmer") || title.includes("frontend") || title.includes("backend") || title.includes("full stack")) {
       fallbackBullets = [
         `Architected and deployed responsive full-stack features, reducing API response times by 38% and supporting 50K+ active users.`,
         `Refactored mission-critical backend microservices, eliminating technical debt and increasing system reliability to 99.95%.`,
         `Collaborated in agile sprint cycles with cross-functional teams, shipping key product milestones 2 weeks ahead of schedule.`,
       ];
+    // Healthcare
     } else if (title.includes("nurse") || title.includes("medical") || title.includes("healthcare") || title.includes("clinic") || title.includes("patient")) {
       fallbackBullets = [
         `Administered compassionate, high-quality patient care and monitored vital signs for 15+ acute care patients per shift.`,
         `Maintained meticulous electronic health records (EHR) in strict compliance with HIPAA and clinical quality standards.`,
         `Collaborated with interdisciplinary healthcare teams to develop and execute personalized patient recovery plans.`,
       ];
+    // Warehouse
     } else if (title.includes("warehouse") || title.includes("logistics") || title.includes("forklift") || title.includes("shipping") || title.includes("inventory")) {
       fallbackBullets = [
         `Processed and staged 350+ shipments daily with a 99.8% order accuracy rate using handheld RF barcode scanners.`,
         `Operated forklift and pallet machinery safely, completing 500+ consecutive days with zero safety infractions.`,
         `Streamlined inbound inventory receiving workflows, reducing average dock-to-stock turnaround time by 25%.`,
       ];
+    // Manager
     } else if (title.includes("manager") || title.includes("lead") || title.includes("director") || title.includes("supervisor")) {
       fallbackBullets = [
         `Directed daily operations and led a high-performing team of 12 employees, improving overall productivity by 24%.`,
@@ -161,9 +230,13 @@ CRITICAL RELEVANCE & ACCURACY GUIDELINES:
       ];
     }
 
+    // Filter out any fallback that is identical to an existing bullet
+    const filteredFallback = fallbackBullets.filter((b) => !existing.includes(b));
+    const finalFallback = filteredFallback.length >= 2 ? filteredFallback : fallbackBullets;
+
     res.status(500).json({
       error: error.message || "Failed to generate bullet points with AI",
-      fallbackBullets,
+      fallbackBullets: finalFallback,
     });
   }
 });
