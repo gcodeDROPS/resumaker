@@ -36,7 +36,6 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
   const [activeTab, setActiveTab] = useState<"contact" | "summary" | "experience" | "skills" | "education" | "extras">("experience");
   const [activeJobId, setActiveJobId] = useState<string | null>(resume.experiences[0]?.id || null);
   const [activeEduId, setActiveEduId] = useState<string | null>(resume.education[0]?.id || null);
-  const [showAiDrafterFor, setShowAiDrafterFor] = useState<string | null>(null);
   const [openPolishMenuKey, setOpenPolishMenuKey] = useState<string | null>(null);
   const [generatingBulletsFor, setGeneratingBulletsFor] = useState<string | null>(null);
   const [polishingBulletKey, setPolishingBulletKey] = useState<string | null>(null);
@@ -431,7 +430,6 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
               {resume.experiences.map((exp, expIdx) => {
                 const isActive = activeJobId === exp.id;
                 const isGenerating = generatingBulletsFor === exp.id;
-                const isDrafterOpen = showAiDrafterFor === exp.id;
 
                 if (!isActive) {
                   // Collapsed, clean summary card
@@ -611,53 +609,51 @@ export const EditorPanel: React.FC<EditorPanelProps> = ({
                         </div>
                       </div>
 
-                      {/* AI Bullets Generator (On-Demand / Clean Drafter) */}
-                      <div className="border-t border-slate-100 pt-3">
+                      {/* Job Summary & Description (1-2 sentences) -> AI Bullets Generator */}
+                      <div className="pt-2 pb-1 border-t border-slate-100 space-y-2">
                         <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5 text-indigo-600" />
+                            <span>Job Summary & Description</span>
+                          </label>
+                          <span className="text-[10px] text-slate-400 font-medium">1-2 sentences</span>
+                        </div>
+                        
+                        <p className="text-[11px] text-slate-500 leading-normal">
+                          Type a quick sentence or two describing what you did in this role. AI will transform it directly into tailored, metric-driven bullet points.
+                        </p>
+
+                        <div className="space-y-2">
+                          <textarea
+                            rows={3}
+                            value={exp.rawNotes || ""}
+                            onChange={(e) => handleUpdateJob(exp.id, { rawNotes: e.target.value })}
+                            placeholder="e.g. Prepared meals on the high-volume grill during peak rushes, maintained food safety standards, and assisted with inventory restocking..."
+                            className="w-full px-3 py-2 rounded-md bg-slate-50/70 border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 focus:bg-white resize-none transition-all"
+                          />
                           <button
                             type="button"
-                            onClick={() => setShowAiDrafterFor(isDrafterOpen ? null : exp.id)}
-                            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1.5 cursor-pointer py-1"
+                            onClick={() => handleGenerateBullets(exp.id)}
+                            disabled={isGenerating}
+                            className="w-full py-2 px-3 rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
                           >
-                            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>{isDrafterOpen ? "Hide AI Drafter" : "Draft bullets from rough notes using AI"}</span>
+                            {isGenerating ? (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                <span>Crafting bullets from your description...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                                <span>Generate Bullets from Description</span>
+                              </>
+                            )}
                           </button>
-                          <span className="text-[10px] text-slate-400">Optional AI assistant</span>
                         </div>
-
-                        {isDrafterOpen && (
-                          <div className="mt-2.5 p-3 bg-indigo-50/50 rounded-lg border border-indigo-100 space-y-2">
-                            <textarea
-                              rows={2}
-                              value={exp.rawNotes || ""}
-                              onChange={(e) => handleUpdateJob(exp.id, { rawNotes: e.target.value })}
-                              placeholder="Type 1-2 rough notes: e.g. Managed 4 devs, launched mobile app with 50k downloads, reduced AWS bill by 20%..."
-                              className="w-full px-3 py-2 rounded-md bg-white border border-indigo-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none transition-all"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleGenerateBullets(exp.id)}
-                              disabled={isGenerating}
-                              className="w-full py-1.5 px-3 rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
-                            >
-                              {isGenerating ? (
-                                <>
-                                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                  <span>Crafting executive bullets...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                                  <span>Generate 3 Executive Bullets</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        )}
                       </div>
 
                       {/* Clean Bullet Points List */}
-                      <div className="space-y-2 pt-1 border-t border-slate-100">
+                      <div className="space-y-2 pt-2 border-t border-slate-100">
                         <div className="flex justify-between items-center">
                           <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
                             Bullet Points ({exp.bullets.length})

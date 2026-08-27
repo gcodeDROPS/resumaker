@@ -46,52 +46,37 @@ app.post("/api/generate-bullets", async (req, res) => {
       : "";
 
     const prompt = `You are a premier executive resume writer specializing in ATS-optimized, high-impact single-page resumes.
-Task: Write exactly ${count} distinctive, highly relevant, metric-driven resume bullet points tailored SPECIFICALLY to this job title and experience summary.
+Task: Write exactly ${count} distinctive, highly relevant, metric-driven resume bullet points directly generated from the job title and 1-2 sentence description provided below.
 
-Context:
-- Current Target Role to Write: "${jobTitle || "Professional"}"
+Job Details:
+- Job Title: "${jobTitle || "Professional"}"
 - Company / Organization: "${company || "Company"}"
-- Specific Experience Notes / Duties: "${description || ""}"
-${summary ? `- Candidate Background / Summary: "${summary}"` : ""}
-${targetRole ? `- Target Career Role: "${targetRole}"` : ""}
-${otherJobTitles.length > 0 ? `- Other Jobs on Resume: ${otherJobTitles.join(", ")}` : ""}${existingBulletList}
+- Job Summary & Description (1-2 sentences): "${description || ""}"
+${summary ? `- Candidate Background Summary: "${summary}"` : ""}
+${targetRole ? `- Target Role: "${targetRole}"` : ""}
+${otherJobTitles.length > 0 ? `- Other Roles on Resume: ${otherJobTitles.join(", ")}` : ""}${existingBulletList}
 
-CRITICAL RELEVANCE & ACCURACY GUIDELINES:
-1. STRICT ROLE DIFFERENTIATION (DO NOT CONFUSE JOBS):
-   - Cook / Line Cook / Grill / Prep / Kitchen / Chef:
-     * Focus on: Meals prepped (150+ per shift), ticket fulfillment times (<4 minutes), grill/fryer/assembly stations, recipe adherence, food safe temperature logs, kitchen sanitation, and HACCP/ServSafe standards.
-     * NEVER write cashier, POS cash register, or customer transaction bullets for a cook!
-   - Cashier / Front Counter / Drive-Thru:
-     * Focus on: POS register transactions (120+/hour), 99.9% cash-handling accuracy, drawer balancing, order speed (<75s), customer greeting, and promo upselling.
-   - Barista / Coffee Specialist:
-     * Focus on: Espresso beverage crafting, latte art, grinder calibration, milk steaming, and speed during morning peak rush.
-   - Server / Waitstaff / Host:
-     * Focus on: Table section management (6-8 tables), menu knowledge, upselling specials, table turns, and guest satisfaction.
-   - Dishwasher / Kitchen Utility:
-     * Focus on: Dish machine operations (500+ items/hr), station sanitization, chemical safety, and kitchen cookware turnaround.
-   - Delivery Driver / Courier:
-     * Focus on: Route navigation, on-time delivery rates (99%+), vehicle safety, and order accuracy checks.
-   - Customer Service / Support:
-     * Focus on: Ticket resolution (65+/day), CSAT scores (95%+), Zendesk/Salesforce CRM, and empathy-driven de-escalation.
-   - Retail Sales Associate:
-     * Focus on: Sales floor customer assistance, inventory replenishment, visual merchandising, and quota attainment.
-   - Software / Tech:
-     * Focus on: Stack technologies, microservices, latency reductions, test coverage, and sprint execution.
-   - Warehouse / Logistics:
-     * Focus on: RF barcode scanning, order picking accuracy (99.8%+), pallet staging, and forklift safety.
-   - Healthcare / Nursing:
-     * Focus on: Patient vital monitoring, triage, EHR charting compliance, and interdisciplinary coordination.
-   - Management / Supervisory:
-     * Focus on: Team leadership, shift scheduling, labor cost reduction, and employee coaching.
+CRITICAL RULES:
+1. FAITHFUL BULLET GENERATION FROM THE DESCRIPTION:
+   - If the user provided a job description / summary above, the generated bullet points MUST directly translate and elevate the exact duties, tools, actions, and responsibilities mentioned in that description.
+   - Do NOT ignore what they wrote or hallucinate unrelated work duties. If they say "cooked burgers on the grill and cleaned stations", generate bullets specifically about high-volume grill cooking, recipe consistency, station sanitization, and food safety.
+   - If no description is provided, generate high-impact bullets tailored to the specific "${jobTitle}" at "${company}".
 
-2. SPECIFICITY FROM NOTES:
-   - If notes are provided ("${description || ""}"), extract and elevate the exact accomplishments, tools, and duties mentioned.
+2. STRICT ROLE ACCURACY & DOMAIN ALIGNMENT:
+   - Cook / Kitchen: Meals prepped, ticket speed (<4 mins), grill/fryer/assembly stations, recipe adherence, food safe temps, HACCP/ServSafe cleanliness.
+   - Cashier / Counter: POS register transactions, 99.9% cash-handling accuracy, drawer balancing, order turnaround speed (<75s), customer greeting, promo upselling.
+   - Barista: Specialty espresso drinks, latte art, grinder calibration, milk steaming, morning peak rush execution.
+   - Customer Service / Support: Ticket volume (60+/day), CSAT score (95%+), CRM systems (Zendesk/Salesforce), de-escalation.
+   - Software / Tech: Stack technologies, microservices, latency reductions, test coverage, sprint execution.
+   - Warehouse / Logistics: RF scanners, order picking accuracy (99.8%+), pallet staging, forklift safety.
+   - Healthcare / Nursing: Patient vital monitoring, triage, EHR charting compliance, interdisciplinary care.
+   - Management: Team leadership, shift scheduling, labor cost reduction, coaching.
 
 3. STRUCTURE & METRICS:
    - Begin each bullet with a strong, distinctive active verb.
-   - Integrate realistic quantitative metrics (%, $, volume, time saved).
-   - Word count: 14 to 22 words per bullet so each statement fits on 1-2 printed lines.
-   - Return clean string array without bullet symbols, asterisks, or numbering.`;
+   - Integrate realistic quantitative metrics (%, $, volume, time saved) that fit the described work.
+   - Word count: 14 to 22 words per bullet so each statement fits cleanly on 1-2 printed lines.
+   - Return clean strings without bullet symbols, asterisks, or numbering.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3.7-flash",
